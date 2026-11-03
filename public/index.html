@@ -95,19 +95,19 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:9px 8px;
     </div>
 
     <div id="loginForm">
-      <input id="loginEmail" type="email" placeholder="Email" value="you@example.com">
-      <input id="loginPass" type="password" placeholder="Password" value="demo">
+      <input id="loginEmail" type="email" placeholder="Email" autocomplete="email">
+      <input id="loginPass" type="password" placeholder="Password" autocomplete="current-password">
       <button class="btn" style="width:100%;margin-top:12px" onclick="doLogin()">Log in</button>
     </div>
 
     <div id="createForm" class="hidden">
       <input id="createName" type="text" placeholder="Your name">
-      <input id="createEmail" type="email" placeholder="Email">
-      <input id="createPass" type="password" placeholder="Password">
+      <input id="createEmail" type="email" placeholder="Email" autocomplete="email">
+      <input id="createPass" type="password" placeholder="Password" autocomplete="new-password">
       <button class="btn" style="width:100%;margin-top:12px" onclick="doCreate()">Create account</button>
     </div>
 
-    <div class="login-hint">Local profiles only (no real server)</div>
+    <div class="login-hint">Your data is saved securely to the cloud</div>
   </div>
 </div>
 
@@ -145,6 +145,7 @@ const dateTimeLabel=s=>s?new Date(s).toLocaleString():"—";
 
 const defaultDB=()=>({version:VERSION,theme:"dark",activities:[],plans:[],logs:[],reviews:[],profile:{name:"My workspace"}});
 let db,tab="Dashboard",calDate=new Date(),calView="month",editingPlan=null,editingActivity=null,editingLog=null;
+let dataLoaded=false; // safety flag: only sync to the cloud after data was successfully loaded
 
 function migrate(d){
   d=d||{};const acts=d.activities||d.acts||[];
@@ -154,8 +155,25 @@ function migrate(d){
     logs:(d.logs||[]).map(l=>({...l,id:l.id||uid("l"),act:l.act||null,plan:l.plan||null,links:Array.isArray(l.links)?l.links:[],note:l.note||"",perf:l.perf||"normal"})),
     reviews:Array.isArray(d.reviews)?d.reviews:[]};
 }
-function load(){let raw=localStorage.getItem(DB_KEY);if(raw){try{db=migrate(JSON.parse(raw));save();return}catch(e){}}db=defaultDB();save()}
-function save(){db.version=VERSION;try{localStorage.setItem(DB_KEY,JSON.stringify(db))}catch(e){notify("Storage full")}}
+function load(){db=defaultDB()}
+
+/* ===== CLOUD SAVE (Turso via Netlify function) ===== */
+async function save(){
+  if(!db)return;
+  db.version=VERSION;
+  const prof = JSON.parse(localStorage.getItem(PROFILE_KEY) || "{}");
+  if(!prof.id) return;      // Not logged in
+  if(!dataLoaded) return;   // Never overwrite cloud data before it has been loaded
+
+  try {
+    const res = await fetch(`/.netlify/functions/data?userId=${prof.id}`, {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ data: db })
+    });
+    const json = await res.json().catch(()=>({}));
+    if(!res.ok || json.success===false) notify("Cloud save failed");
+  } catch(e) { console.log("Save failed"); notify("Cloud save failed – check connection"); }
+}
 function notify(s){const t=$("toast");t.textContent=s;t.style.display="block";clearTimeout(window.__toastTimer);window.__toastTimer=setTimeout(()=>t.style.display="none",2600)}
 
 function switchLoginTab(which){
@@ -165,31 +183,76 @@ function switchLoginTab(which){
   $("loginForm").classList.toggle("hidden", !isLogin);
   $("createForm").classList.toggle("hidden", isLogin);
 }
-function doLogin(){
-  const email = $("loginEmail").value.trim() || "user@local";
-  const name = email.split("@")[0] || "User";
-  localStorage.setItem(PROFILE_KEY, JSON.stringify({ email, name }));
-  enterApp();
+
+/* ===== REAL LOGIN / REGISTER ===== */
+async function doLogin(){
+  const email = $("loginEmail").value.trim();
+  const pass = $("loginPass").value.trim();
+  if(!email || !pass) return notify("Enter email and password");
+
+  try {
+    const res = await fetch("/.netlify/functions/login", {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ email, password: pass })
+    });
+    const json = await res.json();
+    if(json.success) {
+      localStorage.setItem(PROFILE_KEY, JSON.stringify(json.user));
+      enterApp();
+    } else notify(json.message || "Login failed");
+  } catch(e) { notify("Cannot reach server"); }
 }
-function doCreate(){
-  const name = $("createName").value.trim() || "New User";
-  const email = $("createEmail").value.trim() || "user@local";
-  localStorage.setItem(PROFILE_KEY, JSON.stringify({ email, name }));
-  enterApp();
+
+async function doCreate(){
+  const name = $("createName").value.trim();
+  const email = $("createEmail").value.trim();
+  const pass = $("createPass").value.trim();
+  if(!name || !email || !pass) return notify("Fill all fields");
+
+  try {
+    const res = await fetch("/.netlify/functions/register", {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ name, email, password: pass })
+    });
+    const json = await res.json();
+    if(json.success) {
+      localStorage.setItem(PROFILE_KEY, JSON.stringify(json.user));
+      enterApp();
+    } else notify(json.message || "Could not create account");
+  } catch(e) { notify("Cannot reach server"); }
 }
+
 function logout(){
   localStorage.removeItem(PROFILE_KEY);
+  dataLoaded=false;
+  db=defaultDB();
   $("appShell").classList.add("hidden");
   $("loginScreen").style.display = "flex";
 }
-function enterApp(){
+
+async function enterApp(){
   $("loginScreen").style.display = "none";
   $("appShell").classList.remove("hidden");
+
   const prof = JSON.parse(localStorage.getItem(PROFILE_KEY) || "{}");
-  if (db) {
-    db.profile.name = prof.name || "My workspace";
-    updateUserLabel();
+  $("userLabel").textContent = prof.name || "Workspace";
+
+  // Load data from Turso
+  dataLoaded=false;
+  try {
+    const res = await fetch(`/.netlify/functions/data?userId=${prof.id}`);
+    const json = await res.json();
+    if(json.success && json.data) {
+      db = migrate(json.data);
+    } else {
+      db = defaultDB();
+    }
+    dataLoaded=true;
+  } catch(e) {
+    db = defaultDB();
+    notify("Could not load cloud data – changes will not be saved. Refresh to retry.");
   }
+
   document.documentElement.dataset.theme = db?.theme || "dark";
   nav();
   render();
@@ -478,7 +541,7 @@ function renderAnalytics(){
     </div>
   </div>
 
-  <!-- ===== NEW: ACTUAL PERFORMANCE COMPARISON (ACTUAL ONLY, OWN TIMEFRAME DROPDOWN) ===== -->
+  <!-- ===== ACTUAL PERFORMANCE COMPARISON (ACTUAL ONLY, OWN TIMEFRAME DROPDOWN) ===== -->
   <div class="card">
     <h2>Actual Performance Comparison (Stacked Component Bars)</h2>
     <p class="muted small">Actual logged time only. Independent of the filters above. Compares the current period with the previous period.</p>
@@ -499,7 +562,7 @@ function renderAnalytics(){
     <div id="actualCompareLegend" class="legend" style="margin-top:8px"></div>
     <div id="actualCompareSummary" class="grid" style="grid-template-columns:repeat(3,1fr);margin-top:10px"></div>
   </div>
-  <!-- ===== END NEW CHART CARD ===== -->
+  <!-- ===== END CHART CARD ===== -->
 
   <div class="card">
     <h2>Visual 5 · Activity performance breakdown</h2>
@@ -669,7 +732,7 @@ function drawStackedWeekComparison(){
   drawStackedBars("compareWeeks","compareLegend2",labels,lastW,thisW,"Last Week","This Week");
 }
 
-/* ===== NEW: ACTUAL PERFORMANCE COMPARISON (actual only, current vs previous period) ===== */
+/* ===== ACTUAL PERFORMANCE COMPARISON (actual only, current vs previous period) ===== */
 function drawActualComparison(){
   const tf=$("actualCmpTimeframe")?.value||"day";
   const now=new Date(),y=now.getFullYear();
@@ -683,7 +746,6 @@ function drawActualComparison(){
   };
 
   if(tf==="day"){
-    // last 7 days (ending today) vs the 7 days before them
     nameCur="Last 7 days";namePrev="Previous 7 days";
     for(let i=0;i<7;i++){
       const d=addDays(today(),-6+i);
@@ -693,7 +755,6 @@ function drawActualComparison(){
       prev.push(rng(pd,pd));
     }
   }else if(tf==="week"){
-    // last 4 weeks (28 days ending today) vs the 4 weeks before them
     nameCur="Last 4 weeks";namePrev="Previous 4 weeks";
     for(let i=0;i<4;i++){
       const s=addDays(today(),-27+i*7),e=addDays(s,6);
@@ -702,7 +763,6 @@ function drawActualComparison(){
       prev.push(rng(addDays(s,-28),addDays(e,-28)));
     }
   }else if(tf==="month"){
-    // each month of this year vs the same month last year
     nameCur=String(y);namePrev=String(y-1);
     for(let i=0;i<12;i++){
       labels.push(monthNames[i]);
@@ -711,7 +771,6 @@ function drawActualComparison(){
       prev.push(rng(pa,pb));
     }
   }else{
-    // last 3 years, each compared with the year before it
     nameCur="Year";namePrev="Previous year";
     for(let k=y-2;k<=y;k++){
       labels.push(String(k));
@@ -720,7 +779,6 @@ function drawActualComparison(){
     }
   }
 
-  // left bar = current period, right bar = previous period
   drawStackedBars("actualCompareChart","actualCompareLegend",labels,cur,prev,nameCur,namePrev);
 
   const sum=arr=>arr.reduce((t,s)=>t+Object.values(s||{}).reduce((a,b)=>a+b,0),0);
@@ -735,7 +793,7 @@ function drawActualComparison(){
       stat((diff>=0?"+":"−")+fmt(diff)+" ("+(pct>=0?"+":"")+pct.toFixed(0)+"%)","Change");
   }
 }
-/* ===== END NEW ACTUAL COMPARISON ===== */
+/* ===== END ACTUAL COMPARISON ===== */
 
 function roundTopPath(ctx,x,y,w,h,r){
   r=Math.min(r,w/2,h);
