@@ -1,24 +1,25 @@
-import { createClient } from "@libsql/client";
-const db = createClient({ url: process.env.TURSO_DATABASE_URL, authToken: process.env.TURSO_AUTH_TOKEN });
+import crypto from "node:crypto";
+import { db, init, json } from "./lib/db.mjs";
 
-export default async function handler(req) {
-  if (req.method !== "POST") return new Response("Method not allowed", { status: 405 });
-  const { email, password, name } = await req.json();
-
+export default async (req) => {
+  if (req.method !== "POST") return json({ success: false, message: "POST only" }, 405);
   try {
-    const id = crypto.randomUUID();
-    // Note: In a real app, use bcrypt. For simplicity here, we use basic encoding.
-    await db.execute({
-      sql: "INSERT INTO users (id, email, password, name) VALUES (?, ?, ?, ?)",
-      args: [id, email, password, name]
+    await init();
+    const { name, email, password } = await req.json();
+    if (!name || !email || !password) return json({ success: false, message: "Fill all fields" }, 400);
+    const e = email.trim().toLowerCase();
+
+    const exists = await db.execute({ sql: "SELECT id FROM lf_users WHERE email = ?", args: [e] });
+    if (exists.rows.length) return json({ success: false, message: "Email already registered – use Log in" }, 400);
+
+    const salt = crypto.randomBytes(16).toString("hex");
+    const hash = crypto.scryptSync(password, salt, 64).toString("hex");
+    const r = await db.execute({
+      sql: "INSERT INTO lf_users (name, email, salt, password_hash) VALUES (?, ?, ?, ?)",
+      args: [name.trim(), e, salt, hash],
     });
-    // Create empty data for user
-    await db.execute({
-      sql: "INSERT INTO user_data (user_id, data) VALUES (?, ?)",
-      args: [id, JSON.stringify({activities:[],plans:[],logs:[]})]
-    });
-    return Response.json({ success: true, user: { id, email, name } });
+    return json({ success: true, user: { id: Number(r.lastInsertRowid), name: name.trim(), email: e } });
   } catch (err) {
-    return Response.json({ success: false, message: "Email already exists" }, { status: 400 });
+    return json({ success: false, message: "Server error: " + err.message }, 500);
   }
-}
+};

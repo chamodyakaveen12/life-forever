@@ -1,19 +1,26 @@
-import { createClient } from "@libsql/client";
-const db = createClient({ url: process.env.TURSO_DATABASE_URL, authToken: process.env.TURSO_AUTH_TOKEN });
+import crypto from "node:crypto";
+import { db, init, json } from "./lib/db.mjs";
 
-export default async function handler(req) {
-  if (req.method !== "POST") return new Response("Method not allowed", { status: 405 });
-  const { email, password } = await req.json();
-
+export default async (req) => {
+  if (req.method !== "POST") return json({ success: false, message: "POST only" }, 405);
   try {
-    const result = await db.execute({
-      sql: "SELECT * FROM users WHERE email = ? AND password = ?",
-      args: [email, password]
+    await init();
+    const { email, password } = await req.json();
+    if (!email || !password) return json({ success: false, message: "Enter email and password" }, 400);
+
+    const r = await db.execute({
+      sql: "SELECT id, name, email, salt, password_hash FROM lf_users WHERE email = ?",
+      args: [email.trim().toLowerCase()],
     });
-    if (result.rows.length === 0) return Response.json({ success: false, message: "Invalid login" }, { status: 401 });
-    
-    return Response.json({ success: true, user: result.rows[0] });
+    const u = r.rows[0];
+    if (!u) return json({ success: false, message: "Wrong email or password" }, 401);
+
+    const hash = crypto.scryptSync(password, u.salt, 64).toString("hex");
+    const ok = crypto.timingSafeEqual(Buffer.from(hash, "hex"), Buffer.from(u.password_hash, "hex"));
+    if (!ok) return json({ success: false, message: "Wrong email or password" }, 401);
+
+    return json({ success: true, user: { id: Number(u.id), name: u.name, email: u.email } });
   } catch (err) {
-    return Response.json({ success: false, message: "Server error" }, { status: 500 });
+    return json({ success: false, message: "Server error: " + err.message }, 500);
   }
-}
+};
