@@ -25,6 +25,7 @@ input,select,textarea{width:100%;padding:9px 10px;border:1px solid var(--border)
 input:focus,select:focus,textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary2)}
 .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .btn{border:0;border-radius:9px;padding:9px 13px;background:var(--primary);color:#fff;font-weight:650}.btn.secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border)}.btn.danger{background:#b83232}.btn.ghost{background:transparent;color:var(--primary);border:1px solid var(--border)}.btn.sm{padding:5px 8px;font-size:12px}
+.btn:disabled{opacity:.6;cursor:wait}
 .actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
 .badge{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:30px;background:var(--surface2);font-size:11px;color:var(--muted)}
 .good{color:var(--green)}.normal{color:var(--yellow)}.bad{color:var(--red)}
@@ -50,7 +51,7 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:9px 8px;
 .modal-back{position:fixed;inset:0;background:#0008;z-index:30;display:none;align-items:center;justify-content:center;padding:14px}
 .modal{width:min(720px,100%);max-height:92vh;overflow:auto;background:var(--surface);border:1px solid var(--border);border-radius:15px;padding:18px}
 .modal-back.show{display:flex}.hidden{display:none!important}
-#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#172033;color:white;padding:10px 15px;border-radius:9px;z-index:50;display:none;max-width:90vw}
+#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#172033;color:white;padding:10px 15px;border-radius:9px;z-index:200;display:none;max-width:90vw}
 .legend{display:flex;flex-wrap:wrap;gap:10px 16px;margin:10px 0 4px;font-size:12px}.legend span{display:inline-flex;align-items:center;gap:6px}.swatch{width:12px;height:12px;border-radius:3px;display:inline-block}
 .pie-wrap{display:grid;grid-template-columns:1fr 1fr;gap:16px}.pie-box{text-align:center}.pie-box canvas{max-width:220px;margin:0 auto;display:block}
 .day-bars{display:flex;gap:6px;align-items:flex-end;height:100px;margin:16px 0 8px;padding-bottom:4px}
@@ -78,6 +79,8 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:9px 8px;
 .login-card input{background:#0f172a;border:1px solid #475569;color:#f1f5f9;margin-bottom:12px}
 .login-card .btn{width:100%;padding:12px;margin-top:8px;font-size:15px}
 .login-hint{font-size:11px;color:#64748b;margin-top:14px}
+.login-msg{background:#3b1d1d;border:1px solid #7f2a2a;color:#fecaca;border-radius:10px;padding:10px 12px;font-size:12.5px;text-align:left;margin-top:12px;line-height:1.45}
+.login-msg.info{background:#1e2a4a;border-color:#3b4f8a;color:#c7d2fe}
 @media(max-width:850px){.grid{grid-template-columns:repeat(2,1fr)}.two,.pie-wrap{grid-template-columns:1fr}}
 @media(max-width:560px){header{padding:11px 12px}.brand{font-size:16px}nav{top:54px}main{padding:15px 10px 45px}.card{padding:12px}.stat b{font-size:18px}.row{grid-template-columns:1fr}}
 </style>
@@ -97,16 +100,17 @@ table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:9px 8px;
     <div id="loginForm">
       <input id="loginEmail" type="email" placeholder="Email" autocomplete="email">
       <input id="loginPass" type="password" placeholder="Password" autocomplete="current-password">
-      <button class="btn" style="width:100%;margin-top:12px" onclick="doLogin()">Log in</button>
+      <button id="loginBtn" class="btn" style="width:100%;margin-top:12px" onclick="doLogin()">Log in</button>
     </div>
 
     <div id="createForm" class="hidden">
       <input id="createName" type="text" placeholder="Your name">
       <input id="createEmail" type="email" placeholder="Email" autocomplete="email">
       <input id="createPass" type="password" placeholder="Password" autocomplete="new-password">
-      <button class="btn" style="width:100%;margin-top:12px" onclick="doCreate()">Create account</button>
+      <button id="createBtn" class="btn" style="width:100%;margin-top:12px" onclick="doCreate()">Create account</button>
     </div>
 
+    <div id="loginMsg" class="login-msg hidden"></div>
     <div class="login-hint">Your data is saved securely to the cloud</div>
   </div>
 </div>
@@ -157,6 +161,39 @@ function migrate(d){
 }
 function load(){db=defaultDB()}
 
+/* ===== API HELPER: same code works on localhost (netlify dev) and on Netlify =====
+   It always uses relative paths, and turns every failure into a clear message. */
+const RUN_HINT="Open the app through  http://localhost:8888  (run 'netlify dev') or your Netlify link – never by double-clicking the file or using Live Server.";
+async function api(path,{method="GET",body}={}){
+  let res;
+  try{
+    res=await fetch(path,{method,headers:body?{"Content-Type":"application/json"}:undefined,body:body?JSON.stringify(body):undefined});
+  }catch(e){
+    throw new Error("Cannot reach the server. "+RUN_HINT);
+  }
+  const text=await res.text();let json=null;
+  try{json=JSON.parse(text)}catch(e){}
+  if(!json){
+    if(res.status===404) throw new Error("Server functions not found (404). The page is not running through Netlify. "+RUN_HINT);
+    throw new Error("Server returned an unexpected reply (HTTP "+res.status+"). Check the Netlify function logs.");
+  }
+  return json;
+}
+
+/* ===== LOGIN SCREEN MESSAGES (stay on screen until the next try) ===== */
+function loginMsg(text,kind="error"){
+  const el=$("loginMsg");
+  if(!text){el.classList.add("hidden");el.textContent="";return}
+  el.textContent=text;el.className="login-msg"+(kind==="info"?" info":"");
+}
+function checkEnvironment(){
+  if(location.protocol==="file:"){
+    loginMsg("You opened this file directly from your computer, so login cannot work. "+RUN_HINT,"error");
+  }else if(["5500","5501","5502","3000","8080"].includes(location.port)){
+    loginMsg("This port has no Netlify functions, so login will fail. Use http://localhost:8888 (netlify dev) or your Netlify link.","info");
+  }
+}
+
 /* ===== CLOUD SAVE (Turso via Netlify function) ===== */
 async function save(){
   if(!db)return;
@@ -166,15 +203,11 @@ async function save(){
   if(!dataLoaded) return;   // Never overwrite cloud data before it has been loaded
 
   try {
-    const res = await fetch(`/.netlify/functions/data?userId=${prof.id}`, {
-      method: "POST", headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({ data: db })
-    });
-    const json = await res.json().catch(()=>({}));
-    if(!res.ok || json.success===false) notify("Cloud save failed");
-  } catch(e) { console.log("Save failed"); notify("Cloud save failed – check connection"); }
+    const json=await api(`/.netlify/functions/data?userId=${prof.id}`,{method:"POST",body:{data:db}});
+    if(json.success===false) notify("Cloud save failed: "+(json.message||"unknown error"));
+  } catch(e) { console.log("Save failed",e); notify("Cloud save failed – "+e.message); }
 }
-function notify(s){const t=$("toast");t.textContent=s;t.style.display="block";clearTimeout(window.__toastTimer);window.__toastTimer=setTimeout(()=>t.style.display="none",2600)}
+function notify(s){const t=$("toast");t.textContent=s;t.style.display="block";clearTimeout(window.__toastTimer);window.__toastTimer=setTimeout(()=>t.style.display="none",4200)}
 
 function switchLoginTab(which){
   const isLogin = which === "login";
@@ -182,44 +215,40 @@ function switchLoginTab(which){
   $("tabCreate").classList.toggle("active", !isLogin);
   $("loginForm").classList.toggle("hidden", !isLogin);
   $("createForm").classList.toggle("hidden", isLogin);
+  loginMsg("");
+  checkEnvironment();
 }
 
 /* ===== REAL LOGIN / REGISTER ===== */
 async function doLogin(){
   const email = $("loginEmail").value.trim();
   const pass = $("loginPass").value.trim();
-  if(!email || !pass) return notify("Enter email and password");
-
+  if(!email || !pass) return loginMsg("Enter email and password");
+  const btn=$("loginBtn");btn.disabled=true;btn.textContent="Logging in…";loginMsg("");
   try {
-    const res = await fetch("/.netlify/functions/login", {
-      method: "POST", headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({ email, password: pass })
-    });
-    const json = await res.json();
-    if(json.success) {
+    const json=await api("/.netlify/functions/login",{method:"POST",body:{email,password:pass}});
+    if(json.success){
       localStorage.setItem(PROFILE_KEY, JSON.stringify(json.user));
-      enterApp();
-    } else notify(json.message || "Login failed");
-  } catch(e) { notify("Cannot reach server"); }
+      await enterApp();
+    }else loginMsg(json.message || "Login failed");
+  } catch(e) { loginMsg(e.message); }
+  finally{btn.disabled=false;btn.textContent="Log in"}
 }
 
 async function doCreate(){
   const name = $("createName").value.trim();
   const email = $("createEmail").value.trim();
   const pass = $("createPass").value.trim();
-  if(!name || !email || !pass) return notify("Fill all fields");
-
+  if(!name || !email || !pass) return loginMsg("Fill all fields");
+  const btn=$("createBtn");btn.disabled=true;btn.textContent="Creating…";loginMsg("");
   try {
-    const res = await fetch("/.netlify/functions/register", {
-      method: "POST", headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({ name, email, password: pass })
-    });
-    const json = await res.json();
-    if(json.success) {
+    const json=await api("/.netlify/functions/register",{method:"POST",body:{name,email,password:pass}});
+    if(json.success){
       localStorage.setItem(PROFILE_KEY, JSON.stringify(json.user));
-      enterApp();
-    } else notify(json.message || "Could not create account");
-  } catch(e) { notify("Cannot reach server"); }
+      await enterApp();
+    }else loginMsg(json.message || "Could not create account");
+  } catch(e) { loginMsg(e.message); }
+  finally{btn.disabled=false;btn.textContent="Create account"}
 }
 
 function logout(){
@@ -228,6 +257,8 @@ function logout(){
   db=defaultDB();
   $("appShell").classList.add("hidden");
   $("loginScreen").style.display = "flex";
+  loginMsg("");
+  checkEnvironment();
 }
 
 async function enterApp(){
@@ -240,17 +271,17 @@ async function enterApp(){
   // Load data from Turso
   dataLoaded=false;
   try {
-    const res = await fetch(`/.netlify/functions/data?userId=${prof.id}`);
-    const json = await res.json();
+    const json=await api(`/.netlify/functions/data?userId=${prof.id}`);
     if(json.success && json.data) {
       db = migrate(json.data);
     } else {
       db = defaultDB();
     }
+    if(json.success===false) throw new Error(json.message||"Could not load data");
     dataLoaded=true;
   } catch(e) {
     db = defaultDB();
-    notify("Could not load cloud data – changes will not be saved. Refresh to retry.");
+    notify("Could not load cloud data – changes will not be saved. "+e.message);
   }
 
   document.documentElement.dataset.theme = db?.theme || "dark";
@@ -441,9 +472,11 @@ function openLog(id,prefill=null){editingLog=id||null;const l=db.logs.find(x=>x.
   <div class="actions"><button class="btn" onclick="saveLog()">Save</button><button class="btn secondary" onclick="closeModal()">Cancel</button>${id?`<button class="btn danger" onclick="deleteLog('${id}')">Delete</button>`:""}</div>`;showModal()}
 function saveLog(){const title=$("lTitle").value.trim(),start=$("lStart").value,end=$("lEnd").value,links=readLinks("logLinks");if(!title||!start||!end)return notify("Required");if(new Date(end)<=new Date(start))return notify("End after start");const obj={title,act:$("lAct").value||null,plan:$("lPlan").value||null,start,end,perf:$("lPerf").value,note:$("lNote").value,links};if(editingLog)Object.assign(db.logs.find(x=>x.id===editingLog),obj);else db.logs.push({id:uid("log"),...obj});save();closeModal();render();notify("Saved")}
 function deleteLog(id){if(confirm("Delete?")){db.logs=db.logs.filter(x=>x.id!==id);save();closeModal();render()}}
+
+/* ===== ACTUAL LOG: shows notes + reference links under the activity name ===== */
 function ActualLog(v){v.innerHTML=pageHead("Actual Activity Log","Record what really happened",`<button class="btn" onclick="openLog()">＋ Add actual record</button>`)+
 `<div class="card"><h2>Recorded sessions</h2>${db.logs.length?`<div class="table-wrap"><table><thead><tr><th>Activity</th><th>Time</th><th>Folder</th><th>Rating</th><th></th></tr></thead><tbody>${db.logs.slice().sort((a,b)=>b.start.localeCompare(a.start)).map(l=>`<tr>
-  <td style="border-left:5px solid ${actColor(l.act)}"><b><span class="emoji">${actIcon(l.act)}</span>${esc(l.title)}</b></td>
+  <td style="border-left:5px solid ${actColor(l.act)};min-width:220px"><b><span class="emoji">${actIcon(l.act)}</span>${esc(l.title)}</b>${l.note?`<div class="muted small" style="margin-top:4px;white-space:pre-wrap">${esc(l.note)}</div>`:""}${linkRows(l.links)}</td>
   <td>${esc(dateTimeLabel(l.start))}<br><span class="muted small">${fmt(minutes(l.start,l.end))}</span></td>
   <td><span class="dot" style="background:${actColor(l.act)};margin-right:6px"></span>${esc(activityPath(l.act))}</td>
   <td class="${l.perf}">${esc(l.perf)}</td>
@@ -1001,8 +1034,9 @@ function drawPie(canvasId,items,legendId){
   if($(legendId))$(legendId).innerHTML=items.filter(x=>x.value>0).map((it,i)=>`<span><span class="swatch" style="background:${colors[i%colors.length]}"></span>${esc(it.label)} ${(it.value/total*100).toFixed(0)}%</span>`).join("");
 }
 
-function History(v){v.innerHTML=pageHead("Historical Review","Search past records")+`<div class="card"><div class="row"><div><label>Search</label><input id="hSearch" oninput="filterHistory()" placeholder="Title or notes"></div><div><label>Activity</label><select id="hAct" onchange="filterHistory()"><option value="">All</option>${activityOptions()}</select></div></div></div><div class="card"><h2>Results</h2><div id="historyResults"></div></div><div class="card"><h2>Spaced-repetition history</h2>${db.plans.filter(p=>p.seriesId).sort((a,b)=>a.start.localeCompare(b.start)).map(p=>`<div class="agenda-item" style="border-left-color:${actColor(p.act)}"><b><span class="emoji">${actIcon(p.act)}</span>${esc(p.title)}</b><div class="muted small">${dateTimeLabel(p.start)} · ${db.logs.some(l=>l.plan===p.id)?"Linked":"No record"}</div></div>`).join("")||'<div class="empty">No spaced sessions</div>'}</div>`;filterHistory()}
-function filterHistory(){if(!$("historyResults"))return;const q=($("hSearch")?.value||"").toLowerCase(),act=$("hAct")?.value||"";const rows=db.logs.filter(l=>(!q||(l.title+" "+l.note).toLowerCase().includes(q))&&(!act||l.act===act)).sort((a,b)=>b.start.localeCompare(a.start));$("historyResults").innerHTML=rows.length?rows.map(l=>`<div class="agenda-item" style="border-left-color:${actColor(l.act)}"><b><span class="emoji">${actIcon(l.act)}</span>${esc(l.title)}</b><div class="muted small">${dateTimeLabel(l.start)} · ${esc(activityPath(l.act))} · <span class="${l.perf}">${esc(l.perf)}</span></div><button class="btn secondary sm" onclick="openLog('${l.id}')">Edit</button></div>`).join(""):'<div class="empty">No matches</div>'}
+/* ===== HISTORY: spaced-repetition list and results show reference links ===== */
+function History(v){v.innerHTML=pageHead("Historical Review","Search past records")+`<div class="card"><div class="row"><div><label>Search</label><input id="hSearch" oninput="filterHistory()" placeholder="Title or notes"></div><div><label>Activity</label><select id="hAct" onchange="filterHistory()"><option value="">All</option>${activityOptions()}</select></div></div></div><div class="card"><h2>Results</h2><div id="historyResults"></div></div><div class="card"><h2>Spaced-repetition history</h2>${db.plans.filter(p=>p.seriesId).sort((a,b)=>a.start.localeCompare(b.start)).map(p=>`<div class="agenda-item" style="border-left-color:${actColor(p.act)}"><b><span class="emoji">${actIcon(p.act)}</span>${esc(p.title)}</b><div class="muted small">${dateTimeLabel(p.start)} · ${db.logs.some(l=>l.plan===p.id)?"Linked":"No record"}</div>${linkRows(p.links)}</div>`).join("")||'<div class="empty">No spaced sessions</div>'}</div>`;filterHistory()}
+function filterHistory(){if(!$("historyResults"))return;const q=($("hSearch")?.value||"").toLowerCase(),act=$("hAct")?.value||"";const rows=db.logs.filter(l=>(!q||(l.title+" "+l.note).toLowerCase().includes(q))&&(!act||l.act===act)).sort((a,b)=>b.start.localeCompare(a.start));$("historyResults").innerHTML=rows.length?rows.map(l=>`<div class="agenda-item" style="border-left-color:${actColor(l.act)}"><b><span class="emoji">${actIcon(l.act)}</span>${esc(l.title)}</b><div class="muted small">${dateTimeLabel(l.start)} · ${esc(activityPath(l.act))} · <span class="${l.perf}">${esc(l.perf)}</span></div>${l.note?`<div class="muted small" style="margin-top:4px;white-space:pre-wrap">${esc(l.note)}</div>`:""}${linkRows(l.links)}<button class="btn secondary sm" style="margin-top:8px" onclick="openLog('${l.id}')">Edit</button></div>`).join(""):'<div class="empty">No matches</div>'}
 function Settings(v){v.innerHTML=pageHead("Settings & Data","Theme, backup, reset")+`<div class="two"><section class="card"><h2>Appearance</h2><label>Theme</label><select id="themeSelect" onchange="setTheme(this.value)"><option value="light" ${db.theme!=="dark"?"selected":""}>Light</option><option value="dark" ${db.theme==="dark"?"selected":""}>Dark</option></select><label>Workspace name</label><input id="profileName" value="${esc(db.profile?.name||"")}"><button class="btn" onclick="saveProfile()">Save</button></section>
 <section class="card"><h2>Backup</h2><button class="btn" onclick="exportData()">Export JSON</button><label style="margin-top:12px">Import</label><input type="file" id="backupFile" accept=".json"><button class="btn secondary" onclick="importData()">Import & replace</button></section></div>
 <section class="card"><h2>Reset</h2><button class="btn danger" onclick="resetData()">Reset all data</button></section>`}
@@ -1022,6 +1056,7 @@ function init(){
   } else {
     $("loginScreen").style.display = "flex";
     $("appShell").classList.add("hidden");
+    checkEnvironment();
   }
 }
 window.addEventListener("resize",()=>{if(tab==="Analytics")renderAnalytics()});
