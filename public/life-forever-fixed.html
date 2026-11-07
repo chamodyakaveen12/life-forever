@@ -1,0 +1,1031 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f172a">
+<title>Life Forever — Personal Activity Manager</title>
+<style>
+:root{--bg:#f4f6fb;--surface:#fff;--surface2:#eef2f8;--border:#dfe5ef;--text:#182230;--muted:#667085;--primary:#315eea;--primary2:#e9efff;--green:#16a34a;--yellow:#ca8a04;--red:#dc2626;--shadow:0 8px 26px rgba(25,40,75,.06)}
+:root[data-theme="dark"]{--bg:#0f172a;--surface:#1e293b;--surface2:#334155;--border:#475569;--text:#f1f5f9;--muted:#94a3b8;--primary:#818cf8;--primary2:#312e81;--green:#4ade80;--yellow:#fbbf24;--red:#f87171;--shadow:0 8px 26px rgba(0,0,0,.35)}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 Inter,system-ui,-apple-system,Segoe UI,sans-serif}button,input,select,textarea{font:inherit}button{cursor:pointer}
+header{position:sticky;top:0;z-index:10;background:var(--surface);border-bottom:1px solid var(--border);padding:13px max(16px,calc((100vw - 1250px)/2));display:flex;align-items:center;justify-content:space-between;gap:12px}
+.brand{font-weight:800;font-size:19px;letter-spacing:-.4px}.brand small{display:block;font-size:11px;color:var(--muted);font-weight:500}
+.header-actions{display:flex;gap:8px;align-items:center}.user-pill{color:var(--muted);font-size:12px}
+nav{position:sticky;top:57px;z-index:9;background:var(--surface);border-bottom:1px solid var(--border);display:flex;gap:6px;padding:9px max(12px,calc((100vw - 1250px)/2));overflow-x:auto}
+nav button{border:1px solid transparent;background:transparent;color:var(--muted);padding:8px 12px;border-radius:9px;white-space:nowrap}
+nav button.active{background:var(--primary2);color:var(--primary);font-weight:700}
+main{max-width:1250px;margin:auto;padding:22px 16px 60px}
+.page-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px}.page-head h1{font-size:23px;margin:0}.muted{color:var(--muted)}.small{font-size:12px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:14px;box-shadow:var(--shadow)}.card h2{font-size:16px;margin:0 0 12px}.card h3{font-size:14px;margin:12px 0 7px}
+.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.stat{background:var(--surface2);border-radius:11px;padding:13px;min-width:0}.stat b{font-size:22px;display:block;letter-spacing:-.5px}.stat span{font-size:12px;color:var(--muted)}
+label{display:block;color:var(--muted);font-size:12px;font-weight:650;margin:9px 0 4px}
+input,select,textarea{width:100%;padding:9px 10px;border:1px solid var(--border);border-radius:9px;background:var(--bg);color:var(--text);outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary2)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn{border:0;border-radius:9px;padding:9px 13px;background:var(--primary);color:#fff;font-weight:650}.btn.secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border)}.btn.danger{background:#b83232}.btn.ghost{background:transparent;color:var(--primary);border:1px solid var(--border)}.btn.sm{padding:5px 8px;font-size:12px}
+.actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+.badge{display:inline-flex;align-items:center;gap:5px;padding:3px 8px;border-radius:30px;background:var(--surface2);font-size:11px;color:var(--muted)}
+.good{color:var(--green)}.normal{color:var(--yellow)}.bad{color:var(--red)}
+table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:9px 8px;border-bottom:1px solid var(--border);vertical-align:top}th{font-size:11px;color:var(--muted);text-transform:uppercase}
+.table-wrap{overflow-x:auto}
+.folder{border:1px solid var(--border);border-radius:10px;margin:7px 0;background:var(--surface)}
+.folder-line{display:flex;align-items:center;gap:8px;padding:10px;flex-wrap:wrap}.folder-name{font-weight:700;flex:1;min-width:100px}
+.folder-children{padding:0 8px 8px 22px}.dot{width:12px;height:12px;border-radius:50%;display:inline-block;flex:none;vertical-align:middle}
+.calendar-toolbar{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.calendar-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-top:1px solid var(--border);border-left:1px solid var(--border)}
+.day-head,.day-cell{border-right:1px solid var(--border);border-bottom:1px solid var(--border);min-width:0}
+.day-head{text-align:center;padding:8px 2px;color:var(--muted);font-size:11px;font-weight:700}
+.day-cell{min-height:110px;padding:6px;background:var(--surface)}.day-cell.other{background:var(--surface2);opacity:.65}.day-cell.today{outline:2px solid var(--primary);outline-offset:-2px}
+.day-num{font-weight:750;font-size:12px;margin-bottom:5px}
+.event{display:block;width:100%;text-align:left;border:0;border-left:4px solid var(--primary);border-radius:6px;background:var(--primary2);color:var(--text);padding:5px 6px;margin:4px 0;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.week-list{display:grid;grid-template-columns:repeat(7,minmax(120px,1fr));gap:8px;overflow-x:auto}
+.week-col{background:var(--surface2);border-radius:10px;padding:8px;min-height:150px}.week-col h3{margin:0 0 8px}
+.agenda-item{padding:12px;border:1px solid var(--border);border-radius:10px;margin:8px 0;border-left:5px solid var(--primary)}
+.link-list{display:grid;gap:6px;margin-top:6px}.link-item{display:flex;gap:8px;align-items:center;padding:7px;background:var(--surface2);border-radius:8px}
+.link-item a{color:var(--primary);overflow-wrap:anywhere;flex:1}.link-kind{font-size:10px;background:var(--surface);border:1px solid var(--border);padding:2px 6px;border-radius:20px}
+.chart{width:100%;height:260px;display:block}
+.empty{padding:22px;text-align:center;color:var(--muted);border:1px dashed var(--border);border-radius:10px}
+.modal-back{position:fixed;inset:0;background:#0008;z-index:30;display:none;align-items:center;justify-content:center;padding:14px}
+.modal{width:min(720px,100%);max-height:92vh;overflow:auto;background:var(--surface);border:1px solid var(--border);border-radius:15px;padding:18px}
+.modal-back.show{display:flex}.hidden{display:none!important}
+#toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#172033;color:white;padding:10px 15px;border-radius:9px;z-index:50;display:none;max-width:90vw}
+.legend{display:flex;flex-wrap:wrap;gap:10px 16px;margin:10px 0 4px;font-size:12px}.legend span{display:inline-flex;align-items:center;gap:6px}.swatch{width:12px;height:12px;border-radius:3px;display:inline-block}
+.pie-wrap{display:grid;grid-template-columns:1fr 1fr;gap:16px}.pie-box{text-align:center}.pie-box canvas{max-width:220px;margin:0 auto;display:block}
+.day-bars{display:flex;gap:6px;align-items:flex-end;height:100px;margin:16px 0 8px;padding-bottom:4px}
+.day-bar{flex:1;background:var(--surface2);border-radius:6px 6px 0 0;position:relative;min-width:0;height:100%}
+.day-bar .fill{position:absolute;bottom:0;left:0;right:0;border-radius:6px 6px 0 0;min-height:4px}
+.day-bar .lbl{position:absolute;bottom:-20px;left:0;right:0;text-align:center;font-size:10px;color:var(--muted)}
+.day-bar.green .fill{background:var(--green)}.day-bar.yellow .fill{background:var(--yellow)}.day-bar.red .fill{background:var(--red)}
+.streak-grid{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0}
+.streak-day{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff}
+.streak-day.green{background:var(--green)}.streak-day.yellow{background:var(--yellow)}.streak-day.red{background:var(--red)}
+.revision-row{background:var(--surface2);border-radius:10px;padding:12px;margin:10px 0}
+.emoji{font-size:16px;margin-right:6px}
+.habit-grid-wrap{overflow-x:auto}
+.habit-grid{display:grid;gap:4px;font-size:11px}
+.habit-grid .head{text-align:center;color:var(--muted);font-weight:600}
+.habit-cell{width:22px;height:22px;border-radius:4px;background:var(--surface2);cursor:pointer;border:1px solid var(--border)}
+.habit-cell.filled{border-color:transparent}
+.habit-row-label{display:flex;align-items:center;gap:6px;min-width:160px;padding-right:8px}
+#loginScreen{position:fixed;inset:0;background:#0f172a;display:flex;align-items:center;justify-content:center;z-index:100;padding:20px}
+.login-card{background:#1e293b;border-radius:16px;padding:32px 28px;width:min(380px,100%);box-shadow:0 20px 50px rgba(0,0,0,.4);text-align:center}
+.login-card h1{margin:0 0 6px;font-size:22px;color:#f1f5f9}.login-card .sub{color:#94a3b8;font-size:13px;margin-bottom:24px}
+.login-tabs{display:flex;margin-bottom:20px;background:#334155;border-radius:10px;padding:3px}
+.login-tabs button{flex:1;border:0;background:transparent;color:#94a3b8;padding:9px;border-radius:8px;font-weight:600}
+.login-tabs button.active{background:#818cf8;color:#fff}
+.login-card input{background:#0f172a;border:1px solid #475569;color:#f1f5f9;margin-bottom:12px}
+.login-card .btn{width:100%;padding:12px;margin-top:8px;font-size:15px}
+.login-hint{font-size:11px;color:#64748b;margin-top:14px}
+@media(max-width:850px){.grid{grid-template-columns:repeat(2,1fr)}.two,.pie-wrap{grid-template-columns:1fr}}
+@media(max-width:560px){header{padding:11px 12px}.brand{font-size:16px}nav{top:54px}main{padding:15px 10px 45px}.card{padding:12px}.stat b{font-size:18px}.row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div id="loginScreen">
+  <div class="login-card">
+    <div style="font-size:32px;margin-bottom:8px">🌱</div>
+    <h1>Life Forever</h1>
+    <div class="sub">Organise · Plan · Execute · Review · Improve</div>
+
+    <div class="login-tabs">
+      <button id="tabLogin" class="active" onclick="switchLoginTab('login')">Log in</button>
+      <button id="tabCreate" onclick="switchLoginTab('create')">Create account</button>
+    </div>
+
+    <div id="loginForm">
+      <input id="loginEmail" type="email" placeholder="Email" autocomplete="email">
+      <input id="loginPass" type="password" placeholder="Password" autocomplete="current-password">
+      <button class="btn" style="width:100%;margin-top:12px" onclick="doLogin()">Log in</button>
+    </div>
+
+    <div id="createForm" class="hidden">
+      <input id="createName" type="text" placeholder="Your name">
+      <input id="createEmail" type="email" placeholder="Email" autocomplete="email">
+      <input id="createPass" type="password" placeholder="Password" autocomplete="new-password">
+      <button class="btn" style="width:100%;margin-top:12px" onclick="doCreate()">Create account</button>
+    </div>
+
+    <div class="login-hint">Your data is saved securely to the cloud</div>
+  </div>
+</div>
+
+<div id="appShell" class="hidden">
+<header>
+  <div class="brand">🌱 Life Forever<small>Organise · Plan · Execute · Review · Improve</small></div>
+  <div class="header-actions">
+    <span class="user-pill" id="userLabel">Local workspace</span>
+    <button class="btn secondary sm" onclick="toggleTheme()">◐ Theme</button>
+    <button class="btn secondary sm" onclick="logout()">Log out</button>
+  </div>
+</header>
+<nav id="nav"></nav>
+<main id="app"></main>
+</div>
+
+<div id="modalBack" class="modal-back" onclick="if(event.target===this)closeModal()"><div class="modal" id="modal"></div></div>
+<div id="toast"></div>
+
+<script>
+"use strict";
+const DB_KEY="life_forever_database_v9";
+const PROFILE_KEY="life_forever_profile";
+const VERSION=9;
+const $=id=>document.getElementById(id);
+const uid=p=>p+"_"+Date.now().toString(36)+"_"+Math.random().toString(36).slice(2,8);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const today=()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`};
+const localDT=(d=new Date())=>{const x=new Date(d.getTime()-d.getTimezoneOffset()*60000);return x.toISOString().slice(0,16)};
+const addDays=(date,n)=>{const d=new Date(date+"T12:00:00");d.setDate(d.getDate()+n);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`};
+const minutes=(a,b)=>Math.max(0,Math.round((new Date(b)-new Date(a))/60000));
+const fmt=m=>`${Math.floor(Math.abs(m)/60)}h ${Math.abs(m)%60}m`;
+const datePart=s=>String(s||"").slice(0,10);
+const dateTimeLabel=s=>s?new Date(s).toLocaleString():"—";
+
+const defaultDB=()=>({version:VERSION,theme:"dark",activities:[],plans:[],logs:[],reviews:[],profile:{name:"My workspace"}});
+let db,tab="Dashboard",calDate=new Date(),calView="month",editingPlan=null,editingActivity=null,editingLog=null;
+let dataLoaded=false; // safety flag: only sync to the cloud after data was successfully loaded
+
+function migrate(d){
+  d=d||{};const acts=d.activities||d.acts||[];
+  return {version:VERSION,theme:d.theme||"dark",profile:d.profile||{name:"My workspace"},
+    activities:acts.map(a=>({id:a.id||uid("a"),name:a.name||"Untitled",color:a.color||"#315eea",icon:a.icon||"🔹",parent:a.parent??null,archived:!!a.archived,createdAt:a.createdAt||new Date().toISOString()})),
+    plans:(d.plans||[]).map(p=>({...p,id:p.id||uid("p"),act:p.act||null,links:Array.isArray(p.links)?p.links:[],description:p.description||"",seriesId:p.seriesId||null,kind:p.kind||"planned"})),
+    logs:(d.logs||[]).map(l=>({...l,id:l.id||uid("l"),act:l.act||null,plan:l.plan||null,links:Array.isArray(l.links)?l.links:[],note:l.note||"",perf:l.perf||"normal"})),
+    reviews:Array.isArray(d.reviews)?d.reviews:[]};
+}
+function load(){db=defaultDB()}
+
+/* ===== CLOUD SAVE (Turso via Netlify function) ===== */
+async function save(){
+  if(!db)return;
+  db.version=VERSION;
+  const prof = JSON.parse(localStorage.getItem(PROFILE_KEY) || "{}");
+  if(!prof.id) return;      // Not logged in
+  if(!dataLoaded) return;   // Never overwrite cloud data before it has been loaded
+
+  try {
+    const res = await fetch(`/.netlify/functions/data?userId=${prof.id}`, {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ data: db })
+    });
+    const json = await res.json().catch(()=>({}));
+    if(!res.ok || json.success===false) notify("Cloud save failed");
+  } catch(e) { console.log("Save failed"); notify("Cloud save failed – check connection"); }
+}
+function notify(s){const t=$("toast");t.textContent=s;t.style.display="block";clearTimeout(window.__toastTimer);window.__toastTimer=setTimeout(()=>t.style.display="none",2600)}
+
+function switchLoginTab(which){
+  const isLogin = which === "login";
+  $("tabLogin").classList.toggle("active", isLogin);
+  $("tabCreate").classList.toggle("active", !isLogin);
+  $("loginForm").classList.toggle("hidden", !isLogin);
+  $("createForm").classList.toggle("hidden", isLogin);
+}
+
+/* ===== REAL LOGIN / REGISTER ===== */
+async function doLogin(){
+  const email = $("loginEmail").value.trim();
+  const pass = $("loginPass").value.trim();
+  if(!email || !pass) return notify("Enter email and password");
+
+  try {
+    const res = await fetch("/.netlify/functions/login", {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ email, password: pass })
+    });
+    const json = await res.json();
+    if(json.success) {
+      localStorage.setItem(PROFILE_KEY, JSON.stringify(json.user));
+      enterApp();
+    } else notify(json.message || "Login failed");
+  } catch(e) { notify("Cannot reach server"); }
+}
+
+async function doCreate(){
+  const name = $("createName").value.trim();
+  const email = $("createEmail").value.trim();
+  const pass = $("createPass").value.trim();
+  if(!name || !email || !pass) return notify("Fill all fields");
+
+  try {
+    const res = await fetch("/.netlify/functions/register", {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ name, email, password: pass })
+    });
+    const json = await res.json();
+    if(json.success) {
+      localStorage.setItem(PROFILE_KEY, JSON.stringify(json.user));
+      enterApp();
+    } else notify(json.message || "Could not create account");
+  } catch(e) { notify("Cannot reach server"); }
+}
+
+function logout(){
+  localStorage.removeItem(PROFILE_KEY);
+  dataLoaded=false;
+  db=defaultDB();
+  $("appShell").classList.add("hidden");
+  $("loginScreen").style.display = "flex";
+}
+
+async function enterApp(){
+  $("loginScreen").style.display = "none";
+  $("appShell").classList.remove("hidden");
+
+  const prof = JSON.parse(localStorage.getItem(PROFILE_KEY) || "{}");
+  $("userLabel").textContent = prof.name || "Workspace";
+
+  // Load data from Turso
+  dataLoaded=false;
+  try {
+    const res = await fetch(`/.netlify/functions/data?userId=${prof.id}`);
+    const json = await res.json();
+    if(json.success && json.data) {
+      db = migrate(json.data);
+    } else {
+      db = defaultDB();
+    }
+    dataLoaded=true;
+  } catch(e) {
+    db = defaultDB();
+    notify("Could not load cloud data – changes will not be saved. Refresh to retry.");
+  }
+
+  document.documentElement.dataset.theme = db?.theme || "dark";
+  nav();
+  render();
+}
+
+function linkType(url){const u=String(url||"").toLowerCase();if(/youtube\.com|youtu\.be/.test(u))return "YouTube";if(/\.pdf($|\?)/.test(u))return "PDF";return "Website"}
+function validUrl(u){try{const x=new URL(u);return ["http:","https:"].includes(x.protocol)}catch(e){return false}}
+function linkRows(links){if(!links?.length)return '';return `<div class="link-list">${links.map(l=>`<div class="link-item"><span class="link-kind">${esc(l.type||linkType(l.url))}</span><a href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.title||l.url)}</a></div>`).join("")}</div>`}
+function readLinks(containerId){return [...$(containerId).querySelectorAll(".link-editor")].map(row=>({id:row.dataset.id||uid("r"),url:row.querySelector(".link-url").value.trim(),title:row.querySelector(".link-title").value.trim(),type:linkType(row.querySelector(".link-url").value.trim())})).filter(x=>x.url)}
+function linkEditor(links=[],id="linkEditors"){return `<div id="${id}">${links.map(l=>linkEditorRow(l)).join("")}</div><button type="button" class="btn secondary sm" onclick="addLinkRow('${id}')">＋ Add another link</button>`}
+function linkEditorRow(l={}){return `<div class="link-editor card" data-id="${esc(l.id||"")}" style="padding:10px;margin:8px 0"><div class="row"><div><label>URL</label><input class="link-url" type="url" value="${esc(l.url||"")}"></div><div><label>Title</label><input class="link-title" value="${esc(l.title||"")}"></div></div><button type="button" class="btn danger sm" onclick="this.closest('.link-editor').remove()">Remove</button></div>`}
+function addLinkRow(id){$(id).insertAdjacentHTML("beforeend",linkEditorRow())}
+function activeActivities(){return db.activities.filter(a=>!a.archived)}
+function activityPath(id){let a=db.activities.find(x=>x.id===id),out=[],guard=0;while(a&&guard++<100){out.unshift(a.name);a=db.activities.find(x=>x.id===a.parent)}return out.join(" / ")||"Uncategorised"}
+function activityOptions(selected=""){return activeActivities().map(a=>`<option value="${esc(a.id)}" ${a.id===selected?"selected":""}>${esc((a.icon||"🔹")+" "+activityPath(a.id))}</option>`).join("")}
+function getActivity(id){return db.activities.find(a=>a.id===id)}
+function canMove(id,parent){let p=parent,guard=0;while(p&&guard++<100){if(p===id)return false;p=getActivity(p)?.parent||null}return id!==parent}
+function getDescendantIds(rootId){if(!rootId)return null;const ids=new Set([rootId]);let changed=true;while(changed){changed=false;db.activities.forEach(a=>{if(a.parent&&ids.has(a.parent)&&!ids.has(a.id)){ids.add(a.id);changed=true}})}return ids}
+function actColor(id){return getActivity(id)?.color||"#315eea"}
+function actIcon(id){return getActivity(id)?.icon||"🔹"}
+
+const tabs=["Dashboard","Activities","Calendar","Actual Log","Analytics","History","Settings"];
+function nav(){$("nav").innerHTML=tabs.map(t=>`<button class="${t===tab?"active":""}" onclick="go('${t}')">${t}</button>`).join("")}
+function go(t){tab=t;nav();render()}
+function render(){const f={Dashboard,Activities,Calendar,"Actual Log":ActualLog,Analytics,History,Settings}[tab];$("app").innerHTML="";f($("app"))}
+function pageHead(title,sub,action=""){return `<div class="page-head"><div><h1>${title}</h1><div class="muted small">${sub||""}</div></div>${action}</div>`}
+function stat(value,label){return `<div class="stat"><b>${value}</b><span>${label}</span></div>`}
+function allDuration(logs){return logs.reduce((s,l)=>s+minutes(l.start,l.end),0)}
+
+function Dashboard(v){
+  const d=today(),plans=db.plans.filter(p=>datePart(p.start)===d),logs=db.logs.filter(l=>datePart(l.start)===d);
+  const planned=plans.reduce((s,p)=>s+minutes(p.start,p.end),0),actual=allDuration(logs);
+  const score=planned?Math.min(100,Math.round(actual/planned*100)):0;
+  v.innerHTML=pageHead("Dashboard","Your daily review centre",`<button class="btn" onclick="go('Calendar')">＋ Plan activity</button>`)+
+  `<div class="grid">${stat(score+"%","Today's score")}${stat(fmt(actual),"Recorded today")}${stat(fmt(planned),"Planned today")}${stat(db.logs.filter(l=>l.perf==="good"&&datePart(l.start)>=addDays(today(),-6)).length,"Good (7d)")}</div>
+  <div class="two" style="margin-top:14px">
+    <section class="card"><h2>Today's schedule</h2>${plans.length?plans.sort((a,b)=>a.start.localeCompare(b.start)).map(p=>{const col=actColor(p.act);return `<div class="agenda-item" style="border-left-color:${col}"><b><span class="emoji">${actIcon(p.act)}</span>${esc(p.title)}</b><div class="muted small">${p.start.slice(11)}–${p.end.slice(11)} · ${esc(activityPath(p.act))}${p.seriesId?" · Spaced":""}</div><div class="actions"><button class="btn secondary sm" onclick="openPlan('${p.id}')">Edit</button><button class="btn sm" onclick="quickLog('${p.id}')">Record</button></div></div>`}).join(""):'<div class="empty">No plans today</div>'}</section>
+    <section class="card"><h2>Recent records</h2>${db.logs.slice().sort((a,b)=>b.start.localeCompare(a.start)).slice(0,5).map(l=>`<div class="agenda-item" style="border-left-color:${actColor(l.act)}"><b><span class="emoji">${actIcon(l.act)}</span>${esc(l.title)}</b><div class="muted small">${dateTimeLabel(l.start)} · <span class="${l.perf}">${esc(l.perf)}</span></div></div>`).join("")||'<div class="empty">No records</div>'}</section>
+  </div>`;
+}
+
+function folderTree(parent=null){return activeActivities().filter(a=>a.parent===parent).map(a=>`<div class="folder"><div class="folder-line"><span class="dot" style="background:${esc(a.color)}"></span><span class="folder-name"><span class="emoji">${esc(a.icon||"🔹")}</span>${esc(a.name)}</span><span class="badge">${db.activities.filter(x=>x.parent===a.id&&!x.archived).length} sub</span><div class="actions"><button class="btn secondary sm" onclick="editActivity('${a.id}')">Edit</button><button class="btn secondary sm" onclick="moveActivityDialog('${a.id}')">Move</button><button class="btn secondary sm" onclick="archiveActivity('${a.id}')">Archive</button></div></div><div class="folder-children">${folderTree(a.id)}</div></div>`).join("")}
+function Activities(v){v.innerHTML=pageHead("Activity Library","Organise folders and subcategories",`<button class="btn" onclick="editActivity()">＋ New folder</button>`)+
+`<div class="card"><h2>Your activity folders</h2>${folderTree()||'<div class="empty">No folders yet</div>'}</div>
+<div class="card"><h2>Archived</h2>${db.activities.filter(a=>a.archived).map(a=>`<div class="agenda-item">${esc(a.icon||"🔹")} ${esc(a.name)} <button class="btn secondary sm" onclick="restoreActivity('${a.id}')">Restore</button></div>`).join("")||'<span class="muted small">None</span>'}</div>`}
+function editActivity(id){editingActivity=id||null;const a=getActivity(id)||{};$("modal").innerHTML=`<h2>${id?"Edit":"Create"} activity</h2>
+<label>Name</label><input id="fName" value="${esc(a.name||"")}">
+<label>Icon / Symbol (paste any emoji)</label><input id="fIcon" value="${esc(a.icon||"🔹")}" placeholder="🔹 or paste emoji">
+<div class="row"><div><label>Parent</label><select id="fParent"><option value="">Top level</option>${activeActivities().filter(x=>x.id!==id&&canMove(id||"new",x.id)).map(x=>`<option value="${x.id}" ${a.parent===x.id?"selected":""}>${esc(activityPath(x.id))}</option>`).join("")}</select></div>
+<div><label>Colour</label><input id="fColor" type="color" value="${esc(a.color||"#315eea")}"></div></div>
+<div class="actions"><button class="btn" onclick="saveActivity()">Save</button><button class="btn secondary" onclick="closeModal()">Cancel</button>${id?`<button class="btn danger" onclick="deleteActivity('${id}')">Delete</button>`:""}</div>`;showModal()}
+function saveActivity(){const name=$("fName").value.trim(),parent=$("fParent").value||null,icon=$("fIcon").value.trim()||"🔹";if(!name)return notify("Enter a name");if(editingActivity&&!canMove(editingActivity,parent))return notify("Invalid parent");if(editingActivity){const a=getActivity(editingActivity);a.name=name;a.parent=parent;a.color=$("fColor").value;a.icon=icon}else db.activities.push({id:uid("act"),name,parent,color:$("fColor").value,icon,archived:false,createdAt:new Date().toISOString()});save();closeModal();render();notify("Saved")}
+function moveActivityDialog(id){const a=getActivity(id);$("modal").innerHTML=`<h2>Move “${esc(a.name)}”</h2><select id="moveParent"><option value="">Top level</option>${activeActivities().filter(x=>x.id!==id&&canMove(id,x.id)).map(x=>`<option value="${x.id}">${esc(activityPath(x.id))}</option>`).join("")}</select><div class="actions"><button class="btn" onclick="moveActivity('${id}')">Move</button><button class="btn secondary" onclick="closeModal()">Cancel</button></div>`;showModal()}
+function moveActivity(id){getActivity(id).parent=$("moveParent").value||null;save();closeModal();render()}
+function archiveActivity(id){if(confirm("Archive?")){getActivity(id).archived=true;save();render()}}
+function restoreActivity(id){getActivity(id).archived=false;save();render()}
+function deleteActivity(id){if(db.activities.some(a=>a.parent===id))return notify("Move children first");if(db.plans.some(p=>p.act===id)||db.logs.some(l=>l.act===id))return notify("Has history – archive instead");if(confirm("Delete?")){db.activities=db.activities.filter(a=>a.id!==id);save();closeModal();render()}}
+function showModal(){$("modalBack").classList.add("show")}function closeModal(){$("modalBack").classList.remove("show");editingActivity=null;editingPlan=null;editingLog=null}
+
+function Calendar(v){
+  const year=calDate.getFullYear(),month=calDate.getMonth(),first=new Date(year,month,1),start=new Date(year,month,1-first.getDay()),monthName=calDate.toLocaleDateString(undefined,{month:"long",year:"numeric"});
+  const weekStartDate=weekStart(calDate);
+  const weekEndDate=new Date(weekStartDate.getTime()+6*86400000);
+  v.innerHTML=pageHead("Calendar & Planning","Plan and schedule + Spaced Repetition",`<button class="btn" onclick="openPlan()">＋ New plan</button>`)+
+  `<div class="card"><div class="calendar-toolbar">
+    <div class="actions">
+      <button class="btn secondary sm" onclick="shiftCalendar(-1)">‹</button>
+      <button class="btn secondary sm" onclick="calDate=new Date();render()">Today</button>
+      <button class="btn secondary sm" onclick="shiftCalendar(1)">›</button>
+      <b>${calView==="month"?monthName:calView==="week"?"Week of "+dateLabel(weekStartDate):dateLabel(calDate)}</b>
+    </div>
+    <div class="actions">
+      <select style="width:auto" onchange="calView=this.value;render()">
+        <option value="month" ${calView==="month"?"selected":""}>Month</option>
+        <option value="week" ${calView==="week"?"selected":""}>Week</option>
+        <option value="day" ${calView==="day"?"selected":""}>Day</option>
+      </select>
+    </div>
+  </div>
+  ${calView==="month"?monthCalendar(start,month):calView==="week"?weekCalendar():dayCalendar()}
+  </div>
+  <div class="card">
+    <h2>Week of ${dateLabel(weekStartDate)} – ${dateLabel(weekEndDate)}</h2>
+    ${plansForWeek(weekStartDate)}
+  </div>`;
+}
+function dateKey(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`}
+function dateLabel(d){return d.toLocaleDateString(undefined,{weekday:"short",day:"numeric",month:"short"})}
+function weekStart(d){const x=new Date(d);x.setDate(x.getDate()-x.getDay());return x}
+function shiftCalendar(n){if(calView==="month")calDate.setMonth(calDate.getMonth()+n);else calDate.setDate(calDate.getDate()+n*(calView==="week"?7:1));render()}
+function selectCalendarDate(key){calDate=new Date(key+"T12:00:00");render()}
+function monthCalendar(start,month){
+  let s='<div class="calendar-grid">'+["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(x=>`<div class="day-head">${x}</div>`).join("");
+  for(let i=0;i<42;i++){
+    const d=new Date(start);d.setDate(start.getDate()+i);
+    const key=dateKey(d),items=db.plans.filter(p=>datePart(p.start)===key);
+    s+=`<div class="day-cell ${d.getMonth()!==month?"other":""} ${key===today()?"today":""}">
+      <div class="day-num"><button class="btn ghost sm" style="padding:1px 5px" onclick="selectCalendarDate('${key}')">${d.getDate()}</button></div>
+      ${items.slice(0,3).map(p=>`<button class="event" style="border-left-color:${actColor(p.act)};background:${actColor(p.act)}22" onclick="openPlan('${p.id}')">${esc(p.start.slice(11,16))} ${esc(p.title)}${p.seriesId?" ↻":""}</button>`).join("")}
+      ${items.length>3?`<span class="muted small">+${items.length-3}</span>`:""}
+    </div>`;
+  }
+  return s+"</div>";
+}
+function weekCalendar(){const st=weekStart(calDate);return `<div class="week-list">${Array.from({length:7},(_,i)=>{const d=new Date(st);d.setDate(st.getDate()+i);return `<div class="week-col"><h3>${dateLabel(d)}</h3>${plansForDate(dateKey(d))}</div>`}).join("")}</div>`}
+function dayCalendar(){return `<div>${plansForDate(dateKey(calDate))}</div>`}
+function plansForDate(key){const items=db.plans.filter(p=>datePart(p.start)===key).sort((a,b)=>a.start.localeCompare(b.start));return items.length?items.map(p=>{const col=actColor(p.act);return `<div class="agenda-item" style="border-left-color:${col}"><b><span class="emoji">${actIcon(p.act)}</span>${esc(p.title)}</b><div class="muted small">${p.start.slice(11)}–${p.end.slice(11)} · ${esc(activityPath(p.act))}${p.seriesId?" · Spaced repetition":""}</div>${linkRows(p.links)}<div class="actions"><button class="btn secondary sm" onclick="openPlan('${p.id}')">Edit</button><button class="btn sm" onclick="quickLog('${p.id}')">Record</button></div></div>`}).join(""):'<div class="empty">No plans</div>'}
+function plansForWeek(startOfWeek){
+  let html="";
+  for(let i=0;i<7;i++){
+    const d=new Date(startOfWeek);d.setDate(startOfWeek.getDate()+i);
+    const key=dateKey(d);
+    const items=db.plans.filter(p=>datePart(p.start)===key).sort((a,b)=>a.start.localeCompare(b.start));
+    if(items.length){
+      html+=`<div style="margin-bottom:16px"><div class="muted small" style="margin-bottom:6px;font-weight:600">${dateLabel(d)}</div>`;
+      items.forEach(p=>{
+        const col=actColor(p.act);
+        html+=`<div class="agenda-item" style="border-left-color:${col}"><b><span class="emoji">${actIcon(p.act)}</span>${esc(p.title)}</b><div class="muted small">${p.start.slice(11)}–${p.end.slice(11)} · ${esc(activityPath(p.act))}${p.seriesId?" · Spaced repetition":""}</div>${linkRows(p.links)}<div class="actions"><button class="btn secondary sm" onclick="openPlan('${p.id}')">Edit</button><button class="btn sm" onclick="quickLog('${p.id}')">Record</button></div></div>`;
+      });
+      html+="</div>";
+    }
+  }
+  return html||'<div class="empty">No plans for this week</div>';
+}
+
+function openPlan(id){
+  editingPlan=id||null;
+  const p=db.plans.find(x=>x.id===id)||{};
+  const start=p.start||localDT();
+  const end=p.end||localDT(new Date(Date.now()+3600000));
+  $("modal").innerHTML=`
+    <h2>${id?"Edit planned activity":"Plan an activity"}</h2>
+    <label>Activity title</label><input id="pTitle" value="${esc(p.title||"")}">
+    <label>Activity folder</label><select id="pAct"><option value="">Uncategorised</option>${activityOptions(p.act)}</select>
+    <div class="row"><div><label>Start</label><input id="pStart" type="datetime-local" value="${esc(start)}"></div><div><label>End</label><input id="pEnd" type="datetime-local" value="${esc(end)}"></div></div>
+    <label>Description</label><textarea id="pDesc">${esc(p.description||"")}</textarea>
+    <h3>Learning resources</h3>${linkEditor(p.links||[],"planLinks")}
+    <div class="card" style="box-shadow:none;background:var(--surface2);margin-top:16px">
+      <h3>Spaced repetition</h3>
+      <label>Scheduling type</label>
+      <select id="repeatMode" onchange="toggleRepeatFields()">
+        <option value="single">One-time activity</option>
+        <option value="spaced">First-time learning + spaced repetition</option>
+      </select>
+      <div id="repeatFields" class="hidden">
+        <p class="muted small">The first session above is the learning session. Add future revision dates. Times are copied automatically.</p>
+        <div id="revisionRows"></div>
+        <button type="button" class="btn secondary sm" onclick="addRevisionRow()">＋ Add revision date</button>
+      </div>
+    </div>
+    <div class="actions"><button class="btn" onclick="savePlan()">Save plan</button><button class="btn secondary" onclick="closeModal()">Cancel</button>${id?`<button class="btn danger" onclick="deletePlan('${id}')">Delete</button>`:""}</div>`;
+  showModal();
+  $("repeatMode").value=p.seriesId?"spaced":"single";
+  toggleRepeatFields();
+  if(p.seriesId){const series=db.plans.filter(x=>x.seriesId===p.seriesId&&x.id!==p.id).sort((a,b)=>a.start.localeCompare(b.start));series.forEach(x=>addRevisionRow(x.start,x.end,x.id))}
+}
+function toggleRepeatFields(){$("repeatFields").classList.toggle("hidden",$("repeatMode").value!=="spaced")}
+function addRevisionRow(start="",end="",id=""){const s=start||$("pStart").value,e=end||$("pEnd").value;const row=document.createElement("div");row.className="revision-row";row.dataset.id=id;row.innerHTML=`<div class="row"><div><label>Revision start</label><input class="rev-start" type="datetime-local" value="${esc(s)}"></div><div><label>Revision end</label><input class="rev-end" type="datetime-local" value="${esc(e)}"></div></div><button class="btn danger sm" type="button" style="margin-top:8px" onclick="this.closest('.revision-row').remove()">Remove revision</button>`;$("revisionRows").appendChild(row)}
+function savePlan(){
+  const title=$("pTitle").value.trim(),act=$("pAct").value||null,start=$("pStart").value,end=$("pEnd").value,description=$("pDesc").value,links=readLinks("planLinks");
+  if(!title||!start||!end)return notify("Title, start and end required");if(new Date(end)<=new Date(start))return notify("End after start");
+  const old=db.plans.find(p=>p.id===editingPlan);
+  const seriesId=old?.seriesId||($("repeatMode").value==="spaced"?uid("series"):null);
+  const base={title,act,start,end,description,links,seriesId,kind:"planned"};
+  if(old)Object.assign(old,base);else db.plans.push({id:uid("p"),...base});
+  if($("repeatMode").value==="spaced"){
+    const rows=[...document.querySelectorAll(".revision-row")],revisions=[];
+    for(const row of rows){const rs=row.querySelector(".rev-start").value,re=row.querySelector(".rev-end").value;if(!rs||!re||new Date(re)<=new Date(rs))return notify("Check revision times");revisions.push({rs,re,id:row.dataset.id})}
+    if(!old||old.seriesId)db.plans=db.plans.filter(p=>!(p.seriesId===seriesId&&p.id!==(old?.id)));
+    revisions.forEach(r=>db.plans.push({id:r.id||uid("p"),...base,start:r.rs,end:r.re}));
+  }else if(old?.seriesId){db.plans=db.plans.filter(p=>p.id===old.id||p.seriesId!==old.seriesId)}
+  save();closeModal();render();notify("Plan saved");
+}
+function deletePlan(id){if(!confirm("Delete this plan?"))return;const p=db.plans.find(x=>x.id===id);db.plans=db.plans.filter(x=>x.id!==id&&(!p?.seriesId||x.seriesId!==p.seriesId));db.logs.forEach(l=>{if(l.plan===id)l.plan=null});save();closeModal();render()}
+function quickLog(id){const p=db.plans.find(x=>x.id===id);go("Actual Log");setTimeout(()=>openLog(null,p),50)}
+
+function openLog(id,prefill=null){editingLog=id||null;const l=db.logs.find(x=>x.id===id)||{},p=prefill||db.plans.find(x=>x.id===l.plan)||{};const start=l.start||p.start||localDT(),end=l.end||p.end||localDT(new Date(Date.now()+3600000));
+  $("modal").innerHTML=`<h2>${id?"Edit actual record":"Record actual activity"}</h2>
+  <label>What did you do?</label><input id="lTitle" value="${esc(l.title||p.title||"")}">
+  <label>Activity folder</label><select id="lAct"><option value="">Uncategorised</option>${activityOptions(l.act||p.act)}</select>
+  <label>Link to plan</label><select id="lPlan"><option value="">Unplanned</option>${db.plans.map(x=>`<option value="${x.id}" ${(l.plan||p.id)===x.id?"selected":""}>${esc(x.title)}</option>`).join("")}</select>
+  <div class="row"><div><label>Start</label><input id="lStart" type="datetime-local" value="${esc(start)}"></div><div><label>End</label><input id="lEnd" type="datetime-local" value="${esc(end)}"></div></div>
+  <label>Performance</label><select id="lPerf"><option value="good" ${l.perf==="good"?"selected":""}>Good</option><option value="normal" ${!l.perf||l.perf==="normal"?"selected":""}>Normal</option><option value="bad" ${l.perf==="bad"?"selected":""}>Bad</option></select>
+  <label>Notes</label><textarea id="lNote">${esc(l.note||"")}</textarea>
+  <h3>Links</h3>${linkEditor(l.links||p.links||[],"logLinks")}
+  <div class="actions"><button class="btn" onclick="saveLog()">Save</button><button class="btn secondary" onclick="closeModal()">Cancel</button>${id?`<button class="btn danger" onclick="deleteLog('${id}')">Delete</button>`:""}</div>`;showModal()}
+function saveLog(){const title=$("lTitle").value.trim(),start=$("lStart").value,end=$("lEnd").value,links=readLinks("logLinks");if(!title||!start||!end)return notify("Required");if(new Date(end)<=new Date(start))return notify("End after start");const obj={title,act:$("lAct").value||null,plan:$("lPlan").value||null,start,end,perf:$("lPerf").value,note:$("lNote").value,links};if(editingLog)Object.assign(db.logs.find(x=>x.id===editingLog),obj);else db.logs.push({id:uid("log"),...obj});save();closeModal();render();notify("Saved")}
+function deleteLog(id){if(confirm("Delete?")){db.logs=db.logs.filter(x=>x.id!==id);save();closeModal();render()}}
+function ActualLog(v){v.innerHTML=pageHead("Actual Activity Log","Record what really happened",`<button class="btn" onclick="openLog()">＋ Add actual record</button>`)+
+`<div class="card"><h2>Recorded sessions</h2>${db.logs.length?`<div class="table-wrap"><table><thead><tr><th>Activity</th><th>Time</th><th>Folder</th><th>Rating</th><th></th></tr></thead><tbody>${db.logs.slice().sort((a,b)=>b.start.localeCompare(a.start)).map(l=>`<tr>
+  <td style="border-left:5px solid ${actColor(l.act)}"><b><span class="emoji">${actIcon(l.act)}</span>${esc(l.title)}</b>${l.note?`<div class="muted small" style="margin-top:4px">${esc(l.note)}</div>`:""}${linkRows(l.links)}</td>
+  <td>${esc(dateTimeLabel(l.start))}<br><span class="muted small">${fmt(minutes(l.start,l.end))}</span></td>
+  <td><span class="dot" style="background:${actColor(l.act)};margin-right:6px"></span>${esc(activityPath(l.act))}</td>
+  <td class="${l.perf}">${esc(l.perf)}</td>
+  <td><button class="btn secondary sm" onclick="openLog('${l.id}')">Edit</button></td>
+</tr>`).join("")}</tbody></table></div>`:'<div class="empty">No records yet</div>'}</div>`}
+
+function Analytics(v){
+  const from=addDays(today(),-29),to=today();
+  v.innerHTML=pageHead("Analytics","Planned vs Actual + Stacked Comparison + 30-Day Grid")+
+  `<div class="card">
+    <div class="row">
+      <div><label>From date</label><input id="aFrom" type="date" value="${from}"></div>
+      <div><label>To date</label><input id="aTo" type="date" value="${to}"></div>
+    </div>
+    <div class="row">
+      <div><label>Activity filter</label><select id="aAct"><option value="">All activities</option>${activityOptions()}</select></div>
+      <div><label>Performance filter</label><select id="aPerf"><option value="">All ratings</option><option value="good">Good</option><option value="normal">Normal</option><option value="bad">Bad</option></select></div>
+    </div>
+    <button class="btn" onclick="renderAnalytics()">Apply filters</button>
+  </div>
+  <div id="analyticsResults"></div>`;
+  renderAnalytics();
+}
+
+function renderAnalytics(){
+  const from=$("aFrom")?.value,to=$("aTo")?.value,actFilter=$("aAct")?.value||"",perf=$("aPerf")?.value||"";
+  if(from&&to&&from>to)return notify("Start before end");
+  const descIds=getDescendantIds(actFilter);
+  const matchAct=id=>{if(!actFilter)return true;if(descIds)return descIds.has(id);return id===actFilter};
+
+  const plans=db.plans.filter(p=>datePart(p.start)>=from&&datePart(p.start)<=to&&matchAct(p.act));
+  const logs=db.logs.filter(l=>datePart(l.start)>=from&&datePart(l.start)<=to&&matchAct(l.act)&&(!perf||l.perf===perf));
+  const plannedMin=plans.reduce((s,p)=>s+minutes(p.start,p.end),0);
+  const actualMin=allDuration(logs);
+  const variancePct=plannedMin?((actualMin-plannedMin)/plannedMin*100):0;
+
+  function groupKey(actId){
+    if(!actId)return "Uncategorised";
+    if(!actFilter){let a=getActivity(actId);while(a&&a.parent)a=getActivity(a.parent);return a?a.name:"Uncategorised"}
+    const a=getActivity(actId);if(!a)return "Uncategorised";
+    if(a.id===actFilter||a.parent===actFilter)return a.name;
+    let cur=a;while(cur&&cur.parent!==actFilter)cur=getActivity(cur.parent);
+    return cur?cur.name:activityPath(actId);
+  }
+  const planByAct={},logByAct={};
+  plans.forEach(p=>{const k=groupKey(p.act);planByAct[k]=(planByAct[k]||0)+minutes(p.start,p.end)});
+  logs.forEach(l=>{const k=groupKey(l.act);logByAct[k]=(logByAct[k]||0)+minutes(l.start,l.end)});
+  const allKeys=[...new Set([...Object.keys(planByAct),...Object.keys(logByAct)])].sort();
+
+  const days=[];for(let d=from;d<=to&&days.length<120;d=addDays(d,1))days.push(d);
+  const dayPlanned=days.map(d=>plans.filter(p=>datePart(p.start)===d).reduce((s,p)=>s+minutes(p.start,p.end),0)/60);
+  const dayActual=days.map(d=>logs.filter(l=>datePart(l.start)===d).reduce((s,l)=>s+minutes(l.start,l.end),0)/60);
+
+  let yearOptions="";
+  for(let y=2018;y<=2040;y++) yearOptions+=`<option value="${y}">${y}</option>`;
+
+  $("analyticsResults").innerHTML=`
+  <div class="grid" style="margin-bottom:14px">
+    ${stat(fmt(plannedMin),"Planned")}${stat(fmt(actualMin),"Actual")}
+    ${stat((variancePct>=0?"+":"")+variancePct.toFixed(1)+"%","Variance")}${stat(logs.length,"Sessions")}
+  </div>
+
+  <div class="card">
+    <h2>Visual 1 · Planned vs Actual – Main line chart</h2>
+    <canvas id="lineChart" class="chart"></canvas>
+  </div>
+
+  <div class="card">
+    <h2>Comparison Charts (Stacked Component Bars)</h2>
+
+    <div class="row" style="margin-bottom:16px;max-width:320px">
+      <div>
+        <label>Chart Timeframe</label>
+        <select id="compareTimeframe" onchange="drawComparisonCharts()">
+          <option value="week">Week (Days)</option>
+          <option value="month">Month (Weeks)</option>
+          <option value="year">Year (Months)</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="two">
+      <div>
+        <h3>Planned vs Actual</h3>
+        <canvas id="comparePlannedActual" class="chart" height="260"></canvas>
+        <div id="compareLegend1" class="legend" style="margin-top:8px"></div>
+        <p class="muted small" id="compareSummary1">Actual: ${fmt(actualMin)} / Planned: ${fmt(plannedMin)}</p>
+      </div>
+      <div>
+        <h3>This Week vs Last Week</h3>
+        <canvas id="compareWeeks" class="chart" height="260"></canvas>
+        <div id="compareLegend2" class="legend" style="margin-top:8px"></div>
+        <p class="muted small">Always shows current week vs previous week</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== ACTUAL PERFORMANCE COMPARISON (ACTUAL ONLY, OWN TIMEFRAME DROPDOWN) ===== -->
+  <div class="card">
+    <h2>Actual Performance Comparison (Stacked Component Bars)</h2>
+    <p class="muted small">Actual logged time only. Independent of the filters above. Compares the current period with the previous period.</p>
+
+    <div class="row" style="margin-bottom:16px;max-width:320px">
+      <div>
+        <label>Timeframe</label>
+        <select id="actualCmpTimeframe" onchange="drawActualComparison()">
+          <option value="day">Day (7 days vs previous 7 days)</option>
+          <option value="week">Week (4 weeks vs previous 4 weeks)</option>
+          <option value="month">Month (this year vs last year)</option>
+          <option value="year">Year (last 3 years vs year before each)</option>
+        </select>
+      </div>
+    </div>
+
+    <canvas id="actualCompareChart" class="chart" height="260"></canvas>
+    <div id="actualCompareLegend" class="legend" style="margin-top:8px"></div>
+    <div id="actualCompareSummary" class="grid" style="grid-template-columns:repeat(3,1fr);margin-top:10px"></div>
+  </div>
+  <!-- ===== END CHART CARD ===== -->
+
+  <div class="card">
+    <h2>Visual 5 · Activity performance breakdown</h2>
+    <div class="pie-wrap">
+      <div class="pie-box"><h3>Planned</h3><canvas id="piePlanned" width="220" height="220"></canvas><div id="legendPlanned" class="legend" style="justify-content:center"></div></div>
+      <div class="pie-box"><h3>Actual</h3><canvas id="pieActual" width="220" height="220"></canvas><div id="legendActual" class="legend" style="justify-content:center"></div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Habit & Engagement Streak Analytics</h2>
+    <p class="muted small">Good = 100 (Green) · Normal = 50 (Yellow) · Bad / None = 0 (Red)</p>
+    <div class="row" style="margin-bottom:14px">
+      <div><label>Activity</label><select id="streakAct" onchange="drawStreak()"><option value="">All activities</option>${activityOptions()}</select></div>
+      <div><label>Period</label>
+        <select id="streakPeriod" onchange="onPeriodChange()">
+          <option value="week">This Week</option>
+          <option value="4weeks">Last 4 Weeks</option>
+          <option value="month">This Month</option>
+          <option value="custom">Custom Month</option>
+        </select>
+      </div>
+    </div>
+    <div id="customMonthRow" class="row hidden" style="margin-bottom:12px">
+      <div><label>Year</label><select id="customYear">${yearOptions}</select></div>
+      <div><label>Month</label><select id="customMonth">
+        <option value="01">January</option><option value="02">February</option><option value="03">March</option>
+        <option value="04">April</option><option value="05">May</option><option value="06">June</option>
+        <option value="07">July</option><option value="08">August</option><option value="09">September</option>
+        <option value="10">October</option><option value="11">November</option><option value="12">December</option>
+      </select></div>
+    </div>
+    <div id="streakSummary" class="grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:12px"></div>
+    <div class="streak-grid" id="streakDays"></div>
+    <div class="day-bars" id="streakBars" style="margin-top:24px"></div>
+  </div>
+
+  <div class="card">
+    <h2>Score & Period engagement</h2>
+    <div class="row" style="margin-bottom:12px">
+      <div><label>Period</label>
+        <select id="scorePeriod" onchange="drawScoreBars()">
+          <option value="week">This Week (7 days)</option>
+          <option value="4weeks">Last 4 Weeks</option>
+          <option value="month">This Month</option>
+          <option value="custom">Custom Month</option>
+        </select>
+      </div>
+      <div><label>Activity (optional)</label>
+        <select id="scoreAct" onchange="drawScoreBars()"><option value="">All</option>${activityOptions()}</select>
+      </div>
+    </div>
+    <div id="scoreCustomRow" class="row hidden" style="margin-bottom:12px">
+      <div><label>Year</label><select id="scoreYear">${yearOptions}</select></div>
+      <div><label>Month</label><select id="scoreMonth">
+        <option value="01">January</option><option value="02">February</option><option value="03">March</option>
+        <option value="04">April</option><option value="05">May</option><option value="06">June</option>
+        <option value="07">July</option><option value="08">August</option><option value="09">September</option>
+        <option value="10">October</option><option value="11">November</option><option value="12">December</option>
+      </select></div>
+    </div>
+    <div id="scoreSummary" class="grid" style="grid-template-columns:repeat(3,1fr);margin-bottom:8px"></div>
+    <div class="day-bars" id="scoreBars"></div>
+  </div>
+
+  <div class="card">
+    <h2>30-Day Activity Completion Grid</h2>
+    <p class="muted small">Click any empty square to quickly log time for that activity on that day.</p>
+    <div class="row" style="margin-bottom:12px">
+      <div><label>Month</label>
+        <select id="gridMonth" onchange="drawHabitGrid()">
+          <option value="01">January</option><option value="02">February</option><option value="03">March</option>
+          <option value="04">April</option><option value="05">May</option><option value="06">June</option>
+          <option value="07">July</option><option value="08">August</option><option value="09">September</option>
+          <option value="10">October</option><option value="11" selected>November</option><option value="12">December</option>
+        </select>
+      </div>
+      <div><label>Year</label><select id="gridYear" onchange="drawHabitGrid()">${yearOptions}</select></div>
+    </div>
+    <div class="habit-grid-wrap" id="habitGrid"></div>
+  </div>`;
+
+  const now=new Date();
+  if($("customYear")) $("customYear").value=now.getFullYear();
+  if($("customMonth")) $("customMonth").value=String(now.getMonth()+1).padStart(2,"0");
+  if($("scoreYear")) $("scoreYear").value=now.getFullYear();
+  if($("scoreMonth")) $("scoreMonth").value=String(now.getMonth()+1).padStart(2,"0");
+  if($("gridYear")) $("gridYear").value=now.getFullYear();
+  if($("gridMonth")) $("gridMonth").value=String(now.getMonth()+1).padStart(2,"0");
+
+  requestAnimationFrame(()=>{
+    drawLineChart("lineChart",days,dayPlanned,dayActual);
+    drawComparisonCharts();
+    drawActualComparison();
+    drawPie("piePlanned",allKeys.map(k=>({label:k,value:planByAct[k]||0})),"legendPlanned");
+    drawPie("pieActual",allKeys.map(k=>({label:k,value:logByAct[k]||0})),"legendActual");
+    drawStreak();
+    drawScoreBars();
+    drawHabitGrid();
+  });
+}
+
+/* ===== COMPARISON CHARTS (stacked component bars) ===== */
+function drawComparisonCharts(){
+  const timeframe=$("compareTimeframe")?.value||"week";
+  drawStackedPlannedActual(timeframe);
+  drawStackedWeekComparison();
+}
+
+const NO_ACT_COLOR="#64748b";
+const FALLBACK_COLORS=["#315eea","#16a34a","#ca8a04","#dc2626","#7c3aed","#0891b2","#db2777","#65a30d","#f97316","#06b6d4"];
+function stackColor(key,idx){return key==="none"?NO_ACT_COLOR:(getActivity(key)?.color||FALLBACK_COLORS[idx%FALLBACK_COLORS.length])}
+function stackName(key){return key==="none"?"Uncategorised":(getActivity(key)?.name||key)}
+function fh(hours){return hours>=10?Math.round(hours)+"h":hours.toFixed(1)+"h"}
+
+function getActivityMinutesInRange(from,to,type){
+  const result={};
+  const list=type==="plan"?db.plans:db.logs;
+  list.filter(x=>datePart(x.start)>=from&&datePart(x.start)<=to).forEach(x=>{
+    const key=x.act||"none";
+    result[key]=(result[key]||0)+minutes(x.start,x.end);
+  });
+  return result;
+}
+function getActivityMinutesForDay(day,type){return getActivityMinutesInRange(day,day,type)}
+
+function drawStackedPlannedActual(timeframe){
+  const now=new Date(),y=now.getFullYear(),m=now.getMonth();
+  const labels=[],planned=[],actual=[];
+  if(timeframe==="week"){
+    const start=addDays(today(),-now.getDay());
+    ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].forEach((n,i)=>{
+      const d=addDays(start,i);
+      labels.push(n);
+      planned.push(getActivityMinutesForDay(d,"plan"));
+      actual.push(getActivityMinutesForDay(d,"log"));
+    });
+  }else if(timeframe==="month"){
+    const dim=new Date(y,m+1,0).getDate(),mm=String(m+1).padStart(2,"0");
+    for(let w=0;w*7<dim;w++){
+      const a=`${y}-${mm}-${String(w*7+1).padStart(2,"0")}`;
+      const b=`${y}-${mm}-${String(Math.min(w*7+7,dim)).padStart(2,"0")}`;
+      labels.push("Wk "+(w+1));
+      planned.push(getActivityMinutesInRange(a,b,"plan"));
+      actual.push(getActivityMinutesInRange(a,b,"log"));
+    }
+  }else{
+    ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"].forEach((n,i)=>{
+      const mm=String(i+1).padStart(2,"0");
+      const a=`${y}-${mm}-01`,b=`${y}-${mm}-${String(new Date(y,i+1,0).getDate()).padStart(2,"0")}`;
+      labels.push(n);
+      planned.push(getActivityMinutesInRange(a,b,"plan"));
+      actual.push(getActivityMinutesInRange(a,b,"log"));
+    });
+  }
+  drawStackedBars("comparePlannedActual","compareLegend1",labels,planned,actual,"Planned","Actual");
+}
+
+function drawStackedWeekComparison(){
+  const now=new Date();
+  const thisStart=addDays(today(),-now.getDay()),lastStart=addDays(thisStart,-7);
+  const labels=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"],thisW=[],lastW=[];
+  for(let i=0;i<7;i++){
+    thisW.push(getActivityMinutesForDay(addDays(thisStart,i),"log"));
+    lastW.push(getActivityMinutesForDay(addDays(lastStart,i),"log"));
+  }
+  drawStackedBars("compareWeeks","compareLegend2",labels,lastW,thisW,"Last Week","This Week");
+}
+
+/* ===== ACTUAL PERFORMANCE COMPARISON (actual only, current vs previous period) ===== */
+function drawActualComparison(){
+  const tf=$("actualCmpTimeframe")?.value||"day";
+  const now=new Date(),y=now.getFullYear();
+  const labels=[],cur=[],prev=[];
+  let nameCur="",namePrev="";
+  const rng=(a,b)=>getActivityMinutesInRange(a,b,"log");
+  const monthNames=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  const monthRange=(yy,i)=>{
+    const mm=String(i+1).padStart(2,"0");
+    return [`${yy}-${mm}-01`,`${yy}-${mm}-${String(new Date(yy,i+1,0).getDate()).padStart(2,"0")}`];
+  };
+
+  if(tf==="day"){
+    nameCur="Last 7 days";namePrev="Previous 7 days";
+    for(let i=0;i<7;i++){
+      const d=addDays(today(),-6+i);
+      labels.push(new Date(d+"T12:00:00").toLocaleDateString(undefined,{weekday:"short"}));
+      cur.push(rng(d,d));
+      const pd=addDays(d,-7);
+      prev.push(rng(pd,pd));
+    }
+  }else if(tf==="week"){
+    nameCur="Last 4 weeks";namePrev="Previous 4 weeks";
+    for(let i=0;i<4;i++){
+      const s=addDays(today(),-27+i*7),e=addDays(s,6);
+      labels.push("Week "+(i+1));
+      cur.push(rng(s,e));
+      prev.push(rng(addDays(s,-28),addDays(e,-28)));
+    }
+  }else if(tf==="month"){
+    nameCur=String(y);namePrev=String(y-1);
+    for(let i=0;i<12;i++){
+      labels.push(monthNames[i]);
+      const [a,b]=monthRange(y,i),[pa,pb]=monthRange(y-1,i);
+      cur.push(rng(a,b));
+      prev.push(rng(pa,pb));
+    }
+  }else{
+    nameCur="Year";namePrev="Previous year";
+    for(let k=y-2;k<=y;k++){
+      labels.push(String(k));
+      cur.push(rng(`${k}-01-01`,`${k}-12-31`));
+      prev.push(rng(`${k-1}-01-01`,`${k-1}-12-31`));
+    }
+  }
+
+  drawStackedBars("actualCompareChart","actualCompareLegend",labels,cur,prev,nameCur,namePrev);
+
+  const sum=arr=>arr.reduce((t,s)=>t+Object.values(s||{}).reduce((a,b)=>a+b,0),0);
+  const tc=sum(cur),tp=sum(prev);
+  const diff=tc-tp;
+  const pct=tp>0?((diff/tp)*100):(tc>0?100:0);
+  const sumEl=$("actualCompareSummary");
+  if(sumEl){
+    sumEl.innerHTML=
+      stat(fmt(tc),esc(nameCur)+" (actual)")+
+      stat(fmt(tp),esc(namePrev)+" (actual)")+
+      stat((diff>=0?"+":"−")+fmt(diff)+" ("+(pct>=0?"+":"")+pct.toFixed(0)+"%)","Change");
+  }
+}
+/* ===== END ACTUAL COMPARISON ===== */
+
+function roundTopPath(ctx,x,y,w,h,r){
+  r=Math.min(r,w/2,h);
+  ctx.beginPath();ctx.moveTo(x,y+h);ctx.lineTo(x,y+r);ctx.arcTo(x,y,x+r,y,r);
+  ctx.lineTo(x+w-r,y);ctx.arcTo(x+w,y,x+w,y+r,r);ctx.lineTo(x+w,y+h);ctx.closePath();
+}
+
+function getChartTip(){
+  let t=document.getElementById("chartTip");
+  if(!t){
+    t=document.createElement("div");t.id="chartTip";
+    t.style.cssText="position:fixed;z-index:60;display:none;pointer-events:none;background:#172033;color:#fff;padding:8px 10px;border-radius:8px;font-size:12px;line-height:1.5;max-width:240px;box-shadow:0 6px 20px rgba(0,0,0,.4)";
+    document.body.appendChild(t);
+  }
+  return t;
+}
+
+function drawStackedBars(canvasId,legendId,labels,stacksA,stacksB,nameA,nameB){
+  const c=$(canvasId);if(!c)return;
+  const ctx=c.getContext("2d"),w=c.clientWidth||500,h=260,dpr=window.devicePixelRatio||1;
+  c.width=w*dpr;c.height=h*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);
+
+  const left=40,right=12,top=30,bottom=34,plotW=w-left-right,plotH=h-top-bottom;
+  const groupW=plotW/labels.length,barW=Math.min(22,groupW*0.38);
+  const sum=s=>Object.values(s||{}).reduce((a,b)=>a+b,0);
+
+  let maxH=1;
+  [...stacksA,...stacksB].forEach(s=>{maxH=Math.max(maxH,sum(s)/60)});
+  maxH=maxH*1.05;
+
+  ctx.lineWidth=1;ctx.strokeStyle=getCss("--border");ctx.fillStyle=getCss("--muted");
+  ctx.font="10px sans-serif";ctx.textAlign="left";
+  for(let i=0;i<=4;i++){
+    const y=top+plotH*i/4;
+    ctx.beginPath();ctx.moveTo(left,y);ctx.lineTo(w-right,y);ctx.stroke();
+    ctx.fillText((maxH*(1-i/4)).toFixed(1)+"h",2,y+3);
+  }
+
+  const allKeys=[];
+  [...stacksA,...stacksB].forEach(s=>Object.keys(s||{}).forEach(k=>{if(!allKeys.includes(k))allKeys.push(k)}));
+  const colorOf=k=>stackColor(k,allKeys.indexOf(k));
+
+  const hits=[];
+  function drawBar(x,stack,labelText,seriesName){
+    const total=sum(stack);if(total<=0)return;
+    const barH=Math.max(3,(total/60/maxH)*plotH),yTop=top+plotH-barH;
+    ctx.save();
+    roundTopPath(ctx,x,yTop,barW,barH,6);ctx.clip();
+    let yCursor=top+plotH;
+    Object.keys(stack).sort().forEach(k=>{
+      const segH=(stack[k]/total)*barH;
+      ctx.fillStyle=colorOf(k);
+      ctx.fillRect(x,yCursor-segH,barW,segH);
+      yCursor-=segH;
+    });
+    ctx.restore();
+    ctx.fillStyle=getCss("--text");ctx.font="bold 9px sans-serif";ctx.textAlign="center";
+    ctx.fillText(fh(total/60),x+barW/2,yTop-4);
+    hits.push({x,y:yTop,w:barW,h:barH,stack,total,labelText,seriesName});
+  }
+
+  labels.forEach((lab,i)=>{
+    const cx=left+i*groupW+groupW/2;
+    drawBar(cx-barW-1,stacksA[i],lab,nameA);
+    drawBar(cx+1,stacksB[i],lab,nameB);
+    ctx.fillStyle=getCss("--muted");ctx.font="10px sans-serif";ctx.textAlign="center";
+    ctx.fillText(lab,cx,h-14);
+  });
+
+  const legend=$(legendId);
+  if(legend){
+    legend.innerHTML=`<span class="muted small">Left bar = ${esc(nameA)} · Right bar = ${esc(nameB)}</span>`+
+      allKeys.map(k=>`<span><span class="swatch" style="background:${colorOf(k)}"></span>${esc(stackName(k))}</span>`).join("");
+  }
+
+  const tip=getChartTip();
+  c.onmousemove=e=>{
+    const r=c.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top;
+    const hit=hits.find(b=>x>=b.x&&x<=b.x+b.w&&y>=b.y&&y<=b.y+b.h);
+    if(!hit){tip.style.display="none";return}
+    const rows=Object.keys(hit.stack).sort().map(k=>
+      `<div><span class="swatch" style="background:${colorOf(k)};width:9px;height:9px;margin-right:6px"></span>${esc(stackName(k))}: ${fh(hit.stack[k]/60)} (${Math.round(hit.stack[k]/hit.total*100)}%)</div>`).join("");
+    tip.innerHTML=`<b>${esc(hit.labelText)} · ${esc(hit.seriesName)}: ${fh(hit.total/60)}</b>${rows}`;
+    tip.style.left=Math.min(e.clientX+14,window.innerWidth-250)+"px";
+    tip.style.top=(e.clientY+14)+"px";
+    tip.style.display="block";
+  };
+  c.onmouseleave=()=>{tip.style.display="none"};
+}
+/* ===== END COMPARISON CHARTS ===== */
+
+function onPeriodChange(){
+  const period=$("streakPeriod").value;
+  $("customMonthRow").classList.toggle("hidden",period!=="custom");
+  drawStreak();
+}
+
+function getDayScore(day,actId){
+  let dayLogs=db.logs.filter(l=>datePart(l.start)===day);
+  if(actId){const desc=getDescendantIds(actId);dayLogs=dayLogs.filter(l=>desc?desc.has(l.act):l.act===actId)}
+  if(dayLogs.some(l=>l.perf==="good"))return {score:100,color:"green"};
+  if(dayLogs.some(l=>l.perf==="normal"))return {score:50,color:"yellow"};
+  return {score:0,color:"red"};
+}
+
+function drawStreak(){
+  const actId=$("streakAct")?.value||"";
+  const period=$("streakPeriod")?.value||"week";
+  let numDays=7,startD;
+  const now=new Date();
+  if(period==="week"){startD=addDays(today(),-now.getDay());numDays=7}
+  else if(period==="4weeks"){startD=addDays(today(),-27);numDays=28}
+  else if(period==="month"){startD=today().slice(0,8)+"01";numDays=new Date(now.getFullYear(),now.getMonth()+1,0).getDate()}
+  else if(period==="custom"){
+    const y=$("customYear")?.value||now.getFullYear();
+    const m=$("customMonth")?.value||String(now.getMonth()+1).padStart(2,"0");
+    startD=`${y}-${m}-01`;
+    numDays=new Date(y,parseInt(m),0).getDate();
+  }
+  const scores=[];
+  for(let i=0;i<numDays;i++){const d=addDays(startD,i);scores.push({day:d,...getDayScore(d,actId)})}
+  let streak=0;for(let i=scores.length-1;i>=0;i--){if(scores[i].score===100)streak++;else break}
+  const totalScore=scores.reduce((s,x)=>s+x.score,0);
+  const goalMet=Math.round(totalScore/(numDays*100)*100);
+  const activeDays=scores.filter(x=>x.score>0).length;
+  $("streakSummary").innerHTML=`${stat(streak+"d","Current Streak")}${stat(goalMet+"%","Goal Met")}${stat(activeDays,"Active days")}`;
+  $("streakDays").innerHTML=scores.map(s=>`<div class="streak-day ${s.color}" title="${s.day}: ${s.score}">${s.day.slice(8)}</div>`).join("");
+  $("streakBars").innerHTML=scores.map(s=>{const h=Math.max(8,s.score);return `<div class="day-bar ${s.color}" title="${s.day}: ${s.score}"><div class="fill" style="height:${h}%"></div><div class="lbl">${s.day.slice(8)}</div></div>`}).join("");
+}
+
+function drawScoreBars(){
+  const period=$("scorePeriod")?.value||"week";
+  const actId=$("scoreAct")?.value||"";
+  $("scoreCustomRow")?.classList.toggle("hidden",period!=="custom");
+
+  let numDays=7,startD,labelFn;
+  const now=new Date();
+  if(period==="week"){startD=addDays(today(),-now.getDay());numDays=7;labelFn=i=>["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][i]}
+  else if(period==="4weeks"){startD=addDays(today(),-27);numDays=28;labelFn=i=>(i%7===0?addDays(startD,i).slice(5):"")}
+  else if(period==="month"){startD=today().slice(0,8)+"01";numDays=new Date(now.getFullYear(),now.getMonth()+1,0).getDate();labelFn=i=>(i+1)}
+  else if(period==="custom"){
+    const y=$("scoreYear")?.value||now.getFullYear();
+    const m=$("scoreMonth")?.value||String(now.getMonth()+1).padStart(2,"0");
+    startD=`${y}-${m}-01`;
+    numDays=new Date(y,parseInt(m),0).getDate();
+    labelFn=i=>(i+1);
+  }
+  const vals=[];
+  for(let i=0;i<numDays;i++){const d=addDays(startD,i);let dayLogs=db.logs.filter(l=>datePart(l.start)===d);if(actId){const desc=getDescendantIds(actId);dayLogs=dayLogs.filter(l=>desc?desc.has(l.act):l.act===actId)}vals.push(allDuration(dayLogs)/60)}
+  const max=Math.max(0.5,...vals);const total=vals.reduce((a,b)=>a+b,0);const active=vals.filter(v=>v>0).length;
+  $("scoreSummary").innerHTML=`${stat(total.toFixed(1)+"h","Total hours")}${stat(active,"Active days")}${stat(Math.round(active/numDays*100)+"%","Consistency")}`;
+  $("scoreBars").innerHTML=vals.map((v,i)=>{const pct=Math.max(6,(v/max)*100);const cls=v>=max*0.7?"green":v>0?"yellow":"red";return `<div class="day-bar ${cls}" title="${v.toFixed(1)}h"><div class="fill" style="height:${pct}%"></div><div class="lbl">${labelFn(i)}</div></div>`}).join("");
+}
+
+function drawHabitGrid(){
+  const y=$("gridYear")?.value||new Date().getFullYear();
+  const m=$("gridMonth")?.value||String(new Date().getMonth()+1).padStart(2,"0");
+  const daysInMonth=new Date(y,parseInt(m),0).getDate();
+  const acts=activeActivities().filter(a=>!a.parent);
+
+  let html=`<div class="habit-grid" style="grid-template-columns:180px repeat(${daysInMonth},22px)">`;
+  html+=`<div></div>`;
+  for(let d=1;d<=daysInMonth;d++) html+=`<div class="head">${d}</div>`;
+
+  acts.forEach(a=>{
+    html+=`<div class="habit-row-label"><span class="dot" style="background:${a.color}"></span><span class="emoji">${a.icon||"🔹"}</span>${esc(a.name)}</div>`;
+    for(let d=1;d<=daysInMonth;d++){
+      const dayStr=`${y}-${m}-${String(d).padStart(2,"0")}`;
+      const hasLog=db.logs.some(l=>datePart(l.start)===dayStr&&(l.act===a.id||getDescendantIds(a.id)?.has(l.act)));
+      const bg=hasLog?a.color:"var(--surface2)";
+      html+=`<div class="habit-cell ${hasLog?"filled":""}" style="background:${bg}" title="${a.name} - ${dayStr}" onclick="quickGridLog('${a.id}','${dayStr}')"></div>`;
+    }
+  });
+  html+=`</div>`;
+  $("habitGrid").innerHTML=html||'<div class="empty">No top-level activities</div>';
+}
+
+function quickGridLog(actId,dayStr){
+  const start=dayStr+"T09:00";
+  const end=dayStr+"T10:00";
+  openLog(null,{act:actId,start,end,title:getActivity(actId)?.name||"Activity"});
+}
+
+function getCss(v){return getComputedStyle(document.documentElement).getPropertyValue(v).trim()||"#888"}
+function drawLineChart(canvasId,days,planned,actual){
+  const c=$(canvasId);if(!c)return;
+  const ctx=c.getContext("2d"),w=c.clientWidth||600,h=260,dpr=window.devicePixelRatio||1;
+  c.width=w*dpr;c.height=h*dpr;ctx.scale(dpr,dpr);ctx.clearRect(0,0,w,h);
+  const max=Math.max(1,...planned,...actual);const left=40,right=12,top=18,bottom=36,plotW=w-left-right,plotH=h-top-bottom;
+  ctx.strokeStyle=getCss("--border");ctx.fillStyle=getCss("--muted");ctx.font="10px sans-serif";
+  for(let i=0;i<=4;i++){const y=top+plotH*i/4;ctx.beginPath();ctx.moveTo(left,y);ctx.lineTo(w-right,y);ctx.stroke();ctx.fillText((max*(1-i/4)).toFixed(1)+"h",2,y+3)}
+  function series(vals,color){ctx.strokeStyle=color;ctx.lineWidth=2.5;ctx.beginPath();vals.forEach((v,i)=>{const x=left+(days.length<=1?0:i*plotW/(days.length-1)),y=top+plotH-(v/max)*plotH;i===0?ctx.moveTo(x,y):ctx.lineTo(x,y)});ctx.stroke()}
+  series(planned,"#315eea");series(actual,"#16a34a");
+}
+function drawPie(canvasId,items,legendId){
+  const c=$(canvasId);if(!c)return;
+  const ctx=c.getContext("2d"),size=220,dpr=window.devicePixelRatio||1;
+  c.width=size*dpr;c.height=size*dpr;ctx.scale(dpr,dpr);ctx.clearRect(0,0,size,size);
+  const total=items.reduce((s,x)=>s+x.value,0);const colors=["#315eea","#16a34a","#ca8a04","#dc2626","#7c3aed","#0891b2","#db2777","#65a30d"];
+  if(total===0){ctx.fillStyle=getCss("--muted");ctx.font="13px sans-serif";ctx.textAlign="center";ctx.fillText("No data",size/2,size/2);if($(legendId))$(legendId).innerHTML="";return}
+  let start=-Math.PI/2;
+  items.forEach((it,i)=>{if(it.value<=0)return;const slice=(it.value/total)*Math.PI*2;ctx.beginPath();ctx.moveTo(size/2,size/2);ctx.arc(size/2,size/2,size/2-8,start,start+slice);ctx.closePath();ctx.fillStyle=colors[i%colors.length];ctx.fill();start+=slice});
+  ctx.beginPath();ctx.arc(size/2,size/2,size*0.28,0,Math.PI*2);ctx.fillStyle=getCss("--surface");ctx.fill();
+  ctx.fillStyle=getCss("--text");ctx.font="bold 13px sans-serif";ctx.textAlign="center";ctx.fillText(fmt(total),size/2,size/2+5);
+  if($(legendId))$(legendId).innerHTML=items.filter(x=>x.value>0).map((it,i)=>`<span><span class="swatch" style="background:${colors[i%colors.length]}"></span>${esc(it.label)} ${(it.value/total*100).toFixed(0)}%</span>`).join("");
+}
+
+function History(v){v.innerHTML=pageHead("Historical Review","Search past records")+`<div class="card"><div class="row"><div><label>Search</label><input id="hSearch" oninput="filterHistory()" placeholder="Title or notes"></div><div><label>Activity</label><select id="hAct" onchange="filterHistory()"><option value="">All</option>${activityOptions()}</select></div></div></div><div class="card"><h2>Results</h2><div id="historyResults"></div></div><div class="card"><h2>Spaced-repetition history</h2>${db.plans.filter(p=>p.seriesId).sort((a,b)=>a.start.localeCompare(b.start)).map(p=>`<div class="agenda-item" style="border-left-color:${actColor(p.act)}"><b><span class="emoji">${actIcon(p.act)}</span>${esc(p.title)}</b><div class="muted small">${dateTimeLabel(p.start)} · ${db.logs.some(l=>l.plan===p.id)?"Linked":"No record"}</div>${linkRows(p.links)}</div>`).join("")||'<div class="empty">No spaced sessions</div>'}</div>`;filterHistory()}
+function filterHistory(){if(!$("historyResults"))return;const q=($("hSearch")?.value||"").toLowerCase(),act=$("hAct")?.value||"";const rows=db.logs.filter(l=>(!q||(l.title+" "+l.note).toLowerCase().includes(q))&&(!act||l.act===act)).sort((a,b)=>b.start.localeCompare(a.start));$("historyResults").innerHTML=rows.length?rows.map(l=>`<div class="agenda-item" style="border-left-color:${actColor(l.act)}"><b><span class="emoji">${actIcon(l.act)}</span>${esc(l.title)}</b><div class="muted small">${dateTimeLabel(l.start)} · ${esc(activityPath(l.act))} · <span class="${l.perf}">${esc(l.perf)}</span></div>${linkRows(l.links)}<button class="btn secondary sm" onclick="openLog('${l.id}')">Edit</button></div>`).join(""):'<div class="empty">No matches</div>'}
+function Settings(v){v.innerHTML=pageHead("Settings & Data","Theme, backup, reset")+`<div class="two"><section class="card"><h2>Appearance</h2><label>Theme</label><select id="themeSelect" onchange="setTheme(this.value)"><option value="light" ${db.theme!=="dark"?"selected":""}>Light</option><option value="dark" ${db.theme==="dark"?"selected":""}>Dark</option></select><label>Workspace name</label><input id="profileName" value="${esc(db.profile?.name||"")}"><button class="btn" onclick="saveProfile()">Save</button></section>
+<section class="card"><h2>Backup</h2><button class="btn" onclick="exportData()">Export JSON</button><label style="margin-top:12px">Import</label><input type="file" id="backupFile" accept=".json"><button class="btn secondary" onclick="importData()">Import & replace</button></section></div>
+<section class="card"><h2>Reset</h2><button class="btn danger" onclick="resetData()">Reset all data</button></section>`}
+function saveProfile(){db.profile.name=$("profileName").value.trim()||"My workspace";save();updateUserLabel();notify("Saved")}
+function setTheme(t){db.theme=t;document.documentElement.dataset.theme=t;save()}
+function toggleTheme(){setTheme(db.theme==="dark"?"light":"dark");if(tab==="Settings")render()}
+function updateUserLabel(){$("userLabel").textContent=db.profile?.name||"Local workspace"}
+function exportData(){const blob=new Blob([JSON.stringify(db,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="life-forever-backup-"+today()+".json";a.click()}
+function importData(){const f=$("backupFile").files[0];if(!f)return notify("Choose file");const r=new FileReader();r.onload=()=>{try{const d=JSON.parse(r.result);if(!confirm("Replace?"))return;db=migrate(d);save();setTheme(db.theme);go("Dashboard");notify("Restored")}catch(e){notify("Invalid file")}};r.readAsText(f)}
+function resetData(){if(confirm("Delete everything?")&&confirm("Final?")){db=defaultDB();save();go("Dashboard");notify("Reset")}}
+
+function init(){
+  load();
+  const prof = localStorage.getItem(PROFILE_KEY);
+  if(prof){
+    enterApp();
+  } else {
+    $("loginScreen").style.display = "flex";
+    $("appShell").classList.add("hidden");
+  }
+}
+window.addEventListener("resize",()=>{if(tab==="Analytics")renderAnalytics()});
+init();
+</script>
+</body>
+</html>
